@@ -94,8 +94,29 @@ void initialize_dynamic_allocator(uint32 daStart, uint32 initSizeOfAllocatedSpac
 	//=========================================
 	//=========================================
 
+	//int* kh_ptr = (int*)KERNEL_HEAP_START;
+	//int* kb_ptr = (int*)KERNEL_BASE;
+	//int* ds_ptr = (int*)daStart;
+
 	//TODO: [PROJECT'23.MS1 - #5] [3] DYNAMIC ALLOCATOR - initialize_dynamic_allocator()
-	panic("initialize_dynamic_allocator is not implemented yet");
+	//panic("initialize_dynamic_allocator is not implemented yet");
+	//cprintf("daStart --- > %d\n", daStart);
+	//cprintf("initSizeOfAllocatedSpace is %d\n", initSizeOfAllocatedSpace);
+
+	//long long kernel_heap_size = (KERNEL_HEAP_START - KERNEL_BASE);
+	//cprintf("The size of the heap is %d ", kernel_heap_size);
+	if(  daStart >=  KERNEL_HEAP_START &&  daStart <= KERNEL_HEAP_MAX){
+
+		//LIST_INIT(&metaData); --> this line does not affect the run but we will see after implementing the rest
+		//cprintf("Have entered the if condition " );
+		struct BlockMetaData *meta = ((struct BlockMetaData *) daStart) ;
+		meta->is_free = 1;
+		meta->size = initSizeOfAllocatedSpace;
+		//meta->prev_next_info.le_next =
+		//cprintf(" Address of meta is %x\n meta.size = %d\n meta.is_free = %d\n" , meta , meta->size , meta->is_free );
+		LIST_INSERT_HEAD(&metaData, meta);
+		//daStart++;
+	}
 }
 
 //=========================================
