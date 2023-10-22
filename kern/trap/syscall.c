@@ -499,7 +499,7 @@ void* sys_sbrk(int increment)
 	 * 	2) New segment break should be aligned on page-boundary to avoid "No Man's Land" problem
 	 * 	3) As in real OS, allocate pages lazily. While sbrk moves the segment break, pages are not allocated
 	 * 		until the user program actually tries to access data in its heap (i.e. will be allocated via the fault handler).
-	 * 	4) Allocating additional pages for a process� heap will fail if, for example, the free frames are exhausted
+	 * 	4) Allocating additional pages for a process heap will fail if, for example, the free frames are exhausted
 	 * 		or the break exceed the limit of the dynamic allocator. If sys_sbrk fails, the net effect should
 	 * 		be that sys_sbrk returns (void*) -1 and that the segment break and the process heap are unaffected.
 	 * 		You might have to undo any operations you have done so far in this case.
@@ -517,11 +517,38 @@ uint32 syscall(uint32 syscallno, uint32 a1, uint32 a2, uint32 a3, uint32 a4, uin
 {
 	// Call the function corresponding to the 'syscallno' parameter.
 	// Return any appropriate return value.
+	void* address = (void*) a1;
 	switch(syscallno)
 	{
 	/*2023*/
 	//TODO: [PROJECT'23.MS1 - #4] [2] SYSTEM CALLS - Add suitable code here
+	case SYS_sbrk:
+		return (uint32)sys_sbrk(a1);
+		break;
 
+	case SYS_free_user_mem:
+		if(address != NULL && (a1 < USER_LIMIT - PAGE_SIZE && a1 > 0))
+		{
+			sys_free_user_mem(a1 ,a2);
+		}
+		else
+		{
+			sched_kill_env(curenv->env_id);
+		}
+		return 0;
+		break;
+
+	case SYS_allocate_user_mem:
+		if(address != NULL && (a1 < USER_LIMIT - PAGE_SIZE && a1 > 0))
+			{
+				sys_allocate_user_mem(a1 ,a2);
+			}
+			else
+			{
+				sched_kill_env(curenv->env_id);
+			}
+		return 0;
+		break;
 	//=====================================================================
 	case SYS_cputs:
 		sys_cputs((const char*)a1,a2,(uint8)a3);
