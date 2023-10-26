@@ -206,7 +206,91 @@ void *alloc_block_NF(uint32 size)
 void free_block(void *va)
 {
 	//TODO: [PROJECT'23.MS1 - #7] [3] DYNAMIC ALLOCATOR - free_block()
-	panic("free_block is not implemented yet");
+	//panic("free_block is not implemented yet");
+	if(va == NULL)
+	{
+		return;
+	}
+	else
+	{
+		void * ptr_void = va - sizeOfMetaData();
+		struct BlockMetaData * ptr_to_deleted = (struct BlockMetaData *)ptr_void;
+		cprintf("Before ifs \n");
+		struct BlockMetaData * ptr_to_before = LIST_PREV(ptr_to_deleted);
+		struct BlockMetaData * ptr_to_after = LIST_NEXT(ptr_to_deleted);
+		if(ptr_to_deleted == LIST_FIRST(&metaData))
+		{
+			if((ptr_to_after->is_free) == 0)
+			{
+				cprintf("Entered  if only head and next is not free \n");
+				(ptr_to_deleted->is_free)= 1;
+			}
+			else if ((ptr_to_after->is_free) == 1)
+			{
+				cprintf("Entered  if only head and next is free \n");
+				ptr_to_deleted->is_free=1;
+				ptr_to_deleted->size = (ptr_to_deleted->size) + (ptr_to_after->size);
+				ptr_to_after->is_free=0;
+				ptr_to_after->size=0;
+				//LIST_REMOVE(&metaData,ptr_to_after);
+			}
+		}
+		else if (ptr_to_deleted == LIST_LAST(&metaData))
+		{
+			if((ptr_to_before->is_free) == 0)
+			{
+				cprintf("Entered  if only tail and next is not free \n");
+				(ptr_to_deleted->is_free)= 1;
+			}
+			else if ((ptr_to_before->is_free) == 1)
+			{
+				cprintf("Entered  if only tail and next is free \n");
+				ptr_to_before->size = (ptr_to_deleted->size) + (ptr_to_before->size);
+				ptr_to_deleted->size = 0;
+				ptr_to_deleted->is_free=0;
+				//LIST_REMOVE(&metaData,ptr_to_deleted);
+			}
+		}
+		else if ((ptr_to_after->is_free) == 0 &&(ptr_to_before->is_free) == 0)
+		{
+			// up  and down are full
+			cprintf("Entered  if \n");
+			(ptr_to_deleted->is_free)= 1;
+
+		}
+		else if ((ptr_to_after->is_free) == 1 &&(ptr_to_before->is_free) == 0)
+		{
+			// up is free
+			cprintf("Entered  if up\n");
+			(ptr_to_deleted->size)= (ptr_to_deleted->size) + (ptr_to_after->size);
+			(ptr_to_deleted->is_free) = 1;
+			ptr_to_after->is_free=0;
+			ptr_to_after->size=0;
+			//LIST_REMOVE(&metaData,ptr_to_after);
+
+		}
+		else if ((ptr_to_after->is_free) == 0 &&((ptr_to_before)->is_free) == 1)
+		{
+			// down is free
+			cprintf("Entered  if down\n");
+			((ptr_to_before)->size) =  ((ptr_to_before)->size) + (ptr_to_deleted->size);
+			ptr_to_deleted->is_free=0;
+			ptr_to_deleted->size=0;
+			//LIST_REMOVE(&metaData,(ptr_to_deleted));
+		}
+		else if (((ptr_to_after)->is_free) == 1 &&((ptr_to_before)->is_free) == 1)
+		{
+			// both are free
+			cprintf("Entered  if up and down\n");
+			((ptr_to_before)->size ) = ((ptr_to_before)->size)  + (ptr_to_deleted->size) + ((ptr_to_after)->size);
+			ptr_to_after->is_free=0;
+			ptr_to_after->size=0;
+			ptr_to_deleted->is_free=0;
+			ptr_to_deleted->size=0;
+			//LIST_REMOVE(&metaData,ptr_to_after);
+			//LIST_REMOVE(&metaData,(ptr_to_deleted));
+		}
+	}
 }
 
 //=========================================
