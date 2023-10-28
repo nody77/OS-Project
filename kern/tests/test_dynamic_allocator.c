@@ -1382,6 +1382,81 @@ void test_realloc_block_FF()
 			cprintf("test_realloc_block_FF #10.5: WRONG REALLOC! content of the block is not correct. Expected %d\n", blockIndex);
 		}
 	}
+	//3.3 reallocate in first fit place ( relocate -  NEXT DOES NOT FIT) 	OUR TEST
+	cprintf("   3.3 reallocate in first fit place ( relocate -  NEXT DOES NOT FIT)\n\n") ;
+	is_correct = 1;
+	{
+		void * ptr =startVAs[allocCntPerSize - 1 ];
+		free_block(ptr);
+		blockIndex = ((2*allocCntPerSize))- 1 ;
+		new_size = allocSizes[0]+allocSizes[1]- sizeOfMetaData();
+		va = realloc_block_FF(startVAs[blockIndex], new_size);
+		//check return address
+		if(va == NULL || (va != startVAs[allocCntPerSize - 1]))
+		{
+			is_correct = 0;
+			cprintf("test_realloc_block_FF #10.1: WRONG REALLOC - it return wrong address. Expected %x, Actual %x\n", startVAs[blockIndex] ,va);
+		}
+		//check reallocated block size & status
+		block_size = get_block_size(startVAs[allocCntPerSize - 1]) ;
+		if (block_size != new_size + sizeOfMetaData())
+		{
+			is_correct = 0;
+			cprintf("test_realloc_block_FF #10.2: WRONG REALLOC! block size after realloc is not correct. Expected %d, Actual %d\n",new_size + sizeOfMetaData(), block_size);
+		}
+		block_status = is_free_block(startVAs[allocCntPerSize - 1]) ;
+		if (block_status != 0)
+		{
+			is_correct = 0;
+			cprintf("test_realloc_block_FF #10.3: WRONG REALLOC! block status (is_free) not equal 0 after realloc.\n");
+		}
+		//check vanishing block (if any)
+		if (get_block_size(startVAs[blockIndex+1]) != 0 || is_free_block(startVAs[blockIndex+1]) != 0)
+		{
+			is_correct = 0;
+			cprintf("test_realloc_block_FF #10.4: WRONG REALLOC! make sure to ZEROing the size & is_free values of the vanishing block.\n");
+		}
+		//check content of reallocated block
+		if (*(startVAs[allocCntPerSize - 1]) != allocCntPerSize - 1 || *(midVAs[allocCntPerSize - 1]) != allocCntPerSize - 1 ||	*(endVAs[allocCntPerSize - 1]) != allocCntPerSize - 1)
+		{
+			is_correct = 0;
+			cprintf("test_realloc_block_FF #10.5: WRONG REALLOC! content of the block is not correct. Expected %d\n", allocCntPerSize - 1);
+		}
+
+	}
+	//3.4 reallocate in first fit place ( relocate -  NEXT DOES NOT AVAILABLE)	OUR TEST
+	cprintf("   3.4 reallocate in first fit place ( relocate -  NEXT DOES NOT AVAILABLE)\n\n") ;
+	is_correct = 1;
+	{
+		blockIndex = ((3*allocCntPerSize)+1);
+		new_size = allocSizes[1] - sizeOfMetaData();
+		va = realloc_block_FF(startVAs[blockIndex], new_size);
+		if(va == NULL || (va != startVAs[allocCntPerSize *0]))
+		{
+			is_correct = 0;
+			cprintf("test_realloc_block_FF #10.1: WRONG REALLOC - it return wrong address. Expected %x, Actual %x\n", startVAs[blockIndex] ,va);
+		}
+		//check reallocated block size & status
+		block_size = get_block_size(startVAs[allocCntPerSize *0]) ;
+		if (block_size != new_size + sizeOfMetaData())
+		{
+			is_correct = 0;
+			cprintf("test_realloc_block_FF #10.2: WRONG REALLOC! block size after realloc is not correct. Expected %d, Actual %d\n",new_size + sizeOfMetaData(), block_size);
+		}
+		block_status = is_free_block(startVAs[allocCntPerSize *0]) ;
+		if (block_status != 0)
+		{
+			is_correct = 0;
+			cprintf("test_realloc_block_FF #10.3: WRONG REALLOC! block status (is_free) not equal 0 after realloc.\n");
+		}
+		//check content of reallocated block
+		if (*(startVAs[allocCntPerSize *0]) != allocCntPerSize *0 || *(midVAs[allocCntPerSize *0]) != allocCntPerSize *0 ||	*(endVAs[allocCntPerSize *0]) != allocCntPerSize *0)
+		{
+			is_correct = 0;
+			cprintf("test_realloc_block_FF #10.5: WRONG REALLOC! content of the block is not correct. Expected %d\n",allocCntPerSize *0);
+		}
+
+	}
 	if (is_correct)
 	{
 		eval += 25;
@@ -1433,16 +1508,64 @@ void test_realloc_block_FF()
 			cprintf("test_realloc_block_FF #14.5: WRONG REALLOC! content of the block is not correct. Expected %d\n", blockIndex);
 		}
 	}
+	//[4.2] next block is free (splite and merge)
+	cprintf("	4.2: next block is free (splite and merge)\n\n") ;
+	is_correct = 1;
+	{
+		//struct BlockMetaData * element;
+		//LIST_FOREACH(element , &metaData)
+		//{
+			//cprintf("The Address of the block = %x\n" , element);
+			//cprintf("The Size of the block = %d\n" , element->size);
+			//cprintf(" Block is free = %d\n\n" , element->is_free);
+		//}
+
+		blockIndex = 0;
+		new_size = allocSizes[3] - sizeOfMetaData();
+		//cprintf("REALLOCATE to size %d\n",new_size ) ;
+		va = realloc_block_FF(startVAs[blockIndex], new_size);
+		//check return address
+		if(va == NULL || (va != startVAs[blockIndex]))
+		{
+			is_correct = 0;
+			cprintf("test_realloc_block_FF #14.1: WRONG REALLOC - it return wrong address. Expected %x, Actual %x\n", startVAs[blockIndex] ,va);
+		}
+		//check reallocated block size & status
+		block_size = get_block_size(startVAs[blockIndex]) ;
+		if (block_size != new_size + sizeOfMetaData())
+		{
+			is_correct = 0;
+			cprintf("test_realloc_block_FF #14.2: WRONG REALLOC! block size after realloc is not correct. Expected %d, Actual %d\n",new_size + sizeOfMetaData(), block_size);
+		}
+		block_status = is_free_block(startVAs[blockIndex]) ;
+		if (block_status != 0)
+		{
+			is_correct = 0;
+			cprintf("test_realloc_block_FF #14.3: WRONG REALLOC! block status (is_free) not equal 0 after realloc.\n");
+		}
+		//check new free block
+		struct BlockMetaData *newBlkMetaData = (struct BlockMetaData *)(va + new_size);
+		expected_size =  4*kilo - (20 * sizeof(char) + 8);
+		if (newBlkMetaData->size != expected_size || newBlkMetaData->is_free != 1)
+		{
+			is_correct = 0;
+			cprintf("test_realloc_block_FF #14.4: WRONG REALLOC! newly created block is not correct... check it!. Expected %d, Actual %d\n", expected_size, newBlkMetaData->size);
+		}
+		//check content of reallocated block
+		if (*(startVAs[blockIndex]) != blockIndex || *(midVAs[blockIndex]) != blockIndex)
+		{
+			is_correct = 0;
+			cprintf("test_realloc_block_FF #14.5: WRONG REALLOC! content of the block is not correct. Expected %d\n", blockIndex);
+		}
+	}
 	if (is_correct)
 	{
 		eval += 30;
 	}
 
-
 	cprintf("test realloc_block with FIRST FIT completed. Evaluation = %d%\n", eval);
 
 }
-
 
 void test_realloc_block_FF_COMPLETE()
 {
