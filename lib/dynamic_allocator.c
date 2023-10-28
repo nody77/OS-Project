@@ -175,8 +175,86 @@ void *alloc_block_FF(uint32 size)
 //=========================================
 void *alloc_block_BF(uint32 size)
 {
+	int min= 99999999;
 	//TODO: [PROJECT'23.MS1 - BONUS] [3] DYNAMIC ALLOCATOR - alloc_block_BF()
-	panic("alloc_block_BF is not implemented yet");
+	//panic("alloc_block_BF is not implemented yet");
+	if(size == 0)
+	{
+			return NULL;
+	}
+	uint32 required_size_to_be_allocated = size + sizeOfMetaData();
+	int NeedSbrk = 1;
+	struct BlockMetaData * element;
+	LIST_FOREACH(element , &metaData)
+			{
+			if( element->is_free == 1 && (element->size) == required_size_to_be_allocated)
+			{
+					element->is_free =0;
+					element->size  = required_size_to_be_allocated;
+					NeedSbrk=0;
+					return element+1;
+			}
+
+			}
+	int var = 0;
+	struct BlockMetaData * flag;
+		LIST_FOREACH(element , &metaData)
+		{
+
+			 if (element->is_free == 1 && (element->size) > required_size_to_be_allocated)
+			 {
+				 var = (element->size - required_size_to_be_allocated );
+				 if(var < min)
+				 {
+					 cprintf("var=%d\n",var);
+					 min = var;
+					 NeedSbrk = 0;
+				 }
+			 }
+
+		}
+		LIST_FOREACH(element , &metaData)
+				{
+					 if ((element->size - required_size_to_be_allocated)==var)
+					 {
+//						 if(var<sizeOfMetaData())
+//						 {
+//							element->is_free =0;
+//							element->size  = required_size_to_be_allocated + var;
+//							NeedSbrk=0;
+//							return element+1;
+//						 }
+						element->is_free =0;
+						void * address = (void *)element +required_size_to_be_allocated;
+						cprintf("the address is %x\n",address);
+						struct BlockMetaData * newMetadata = (struct BlockMetaData *)address;
+						cprintf("the address is %x\n",address);
+						newMetadata->is_free = 1;
+						newMetadata->size = (element->size) - (required_size_to_be_allocated);
+						LIST_INSERT_AFTER(&metaData,element,newMetadata);
+						element->size = required_size_to_be_allocated;
+						//cprintf("The address of the new meta data = %x\n" , newMetadata);
+						cprintf("The address of the block found  = %x\n" , element);
+
+						void * returned_va = (void *)element + sizeOfMetaData();
+						//cprintf("The address of the returned block  = %x\n" , returned_va);
+						return returned_va;
+						NeedSbrk=0;
+					 }
+
+				}
+
+
+    if (NeedSbrk == 1)
+	{
+
+				int is_extended = (int)sbrk(size);
+				if (is_extended == -1)
+				{
+					return NULL;
+				}
+	}
+
 	return NULL;
 }
 
