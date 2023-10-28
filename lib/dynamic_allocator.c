@@ -126,7 +126,6 @@ void *alloc_block_FF(uint32 size)
 {
 	//TODO: [PROJECT'23.MS1 - #6] [3] DYNAMIC ALLOCATOR - alloc_block_FF()
 	//panic("alloc_block_FF is not implemented yet");
-	//cprintf("the allocated size = %d" , size);
 	if(size == 0)
 	{
 		return NULL;
@@ -148,15 +147,15 @@ void *alloc_block_FF(uint32 size)
 			element->is_free =0;
 			found_block = 1;
 			void * address = (void *)element +required_size_to_be_allocated;
-			cprintf("the address is %x\n",address);
-			struct BlockMetaData * newMetadata = (struct BlockMetaData *)address;
-			cprintf("the address is %x\n",address);
-			newMetadata->is_free = 1;
-			newMetadata->size = (element->size) - (required_size_to_be_allocated);
-			LIST_INSERT_AFTER(&metaData,element,newMetadata);
-			element->size = required_size_to_be_allocated;
-			cprintf("The address of the new meta data = %x\n" , newMetadata);
-			cprintf("The address of the block found  = %x\n" , element);
+			uint32 remaining_size = (element->size) - required_size_to_be_allocated;
+			if(remaining_size >= sizeOfMetaData())
+			{
+				struct BlockMetaData * newMetadata = (struct BlockMetaData *)address;
+				newMetadata->is_free = 1;
+				newMetadata->size = (element->size) - (required_size_to_be_allocated);
+				LIST_INSERT_AFTER(&metaData,element,newMetadata);
+				element->size = required_size_to_be_allocated;
+			}
 			void * returned_va = (void *)element + sizeOfMetaData();
 			return returned_va;
 		}
@@ -166,7 +165,6 @@ void *alloc_block_FF(uint32 size)
 		int is_extended = (int)sbrk(size);
 		if (is_extended == -1)
 		{
-			//cprintf("found =0 \n");
 			return NULL;
 		}
 	}
