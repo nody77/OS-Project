@@ -192,7 +192,7 @@ void *alloc_block_BF(uint32 size)
 			 var = (element->size - required_size_to_be_allocated );
 			 if(var < min)
 			 {
-				 //cprintf("var=%d\n",var);
+				 cprintf("var=%d\n",var);
 				 min = var;
 				 NeedSbrk = 0;
 			 }
@@ -201,24 +201,30 @@ void *alloc_block_BF(uint32 size)
 	}
 	LIST_FOREACH(element , &metaData)
 	{
-		if ((element->size - required_size_to_be_allocated) == var)
+		if ((element->size - required_size_to_be_allocated) == min)
 		{
-			if(var < sizeOfMetaData())
+			if(min < sizeOfMetaData())
 			{
 				element->is_free =0;
-				element->size  = required_size_to_be_allocated + var;
+				element->size  = required_size_to_be_allocated + min;
 				NeedSbrk=0;
 				return (void *)element + sizeOfMetaData();
 			}
-			element->is_free = 0;
-			void * address = (void *)element + required_size_to_be_allocated;
-			struct BlockMetaData * newMetadata = (struct BlockMetaData *)address;
-			newMetadata->is_free = 1;
-			newMetadata->size = var;
-			LIST_INSERT_AFTER(&metaData,element,newMetadata);
-			element->size = required_size_to_be_allocated;
-			void * returned_va = (void *)element + sizeOfMetaData();
-			return returned_va;
+			else
+			{
+				element->is_free = 0;
+				void * address = (void *)element + required_size_to_be_allocated;
+				cprintf("the address is %x\n",address);
+				struct BlockMetaData * newMetadata = (struct BlockMetaData *)address;
+				cprintf("the address is %x\n",address);
+				newMetadata->is_free = 1;
+				newMetadata->size = min;
+				LIST_INSERT_AFTER(&metaData,element,newMetadata);
+				element->size = required_size_to_be_allocated;
+				cprintf("The address of the block found  = %x\n" , element);
+				void * returned_va = (void *)element + sizeOfMetaData();
+				return returned_va;
+			}
 		 }
 
 	}
