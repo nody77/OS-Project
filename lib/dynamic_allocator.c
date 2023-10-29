@@ -421,7 +421,6 @@ void *realloc_block_FF(void* va, uint32 new_size)
 		else if(ptr_to_be_changed->size > size && ptr_to_be_changed_after->is_free == 1)
 		{
 			//SIZED DEC , SPLIT , merge
-				///// Stupid ////
 			//splite
 			cprintf("The size is small in head\n");
 			void * address = ptr_void + size;
