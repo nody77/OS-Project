@@ -205,6 +205,7 @@ void test_alloc_block_FF()
 	cprintf("SECOND: Tests depend on BOTH Allocate and Free [60%] \n") ;
 	cprintf("====================================================\n") ;
 
+
 	//Free set of blocks with different sizes (first block of each size)
 	for (int i = 0; i < numOfAllocs; ++i)
 	{
@@ -1297,7 +1298,7 @@ void test_realloc_block_FF()
 	cprintf("3: Test calling realloc with increased sizes [50%].\n\n") ;
 	int blockIndex, block_size, block_status, old_size, new_size, expected_size, newBlockIndex;
 	void* expected_va = NULL;
-	//[3.1] reallocate in same place (NO relocate - split)
+	//[3.1] reallocate in same place (NO relocate - split) THE SAME SIZE
 	cprintf("	3.1: reallocate in same place (NO relocate - split)\n\n") ;
 	is_correct = 1;
 	{
@@ -1342,7 +1343,7 @@ void test_realloc_block_FF()
 		eval += 25;
 	}
 
-	//[3.2] reallocate in same place (NO relocate - NO split)
+	//[3.2] reallocate in same place (NO relocate - NO split) FITS THE BLOCK AND THE NEXT ONE PERFECT
 	cprintf("	3.2: reallocate in same place (NO relocate - NO split)\n\n") ;
 	is_correct = 1;
 	{
@@ -1382,7 +1383,7 @@ void test_realloc_block_FF()
 			cprintf("test_realloc_block_FF #10.5: WRONG REALLOC! content of the block is not correct. Expected %d\n", blockIndex);
 		}
 	}
-	//3.3 reallocate in first fit place ( relocate -  NEXT DOES NOT FIT) 	OUR TEST
+	//3.3 reallocate in first fit place ( relocate -  NEXT DOES NOT FIT) 	OUR TEST BLOCK AND THE NEXT DOES NOT FIT THE NEW SIZE
 	cprintf("   3.3 reallocate in first fit place ( relocate -  NEXT DOES NOT FIT)\n\n") ;
 	is_correct = 1;
 	{
@@ -1424,8 +1425,8 @@ void test_realloc_block_FF()
 		}
 
 	}
-	//3.4 reallocate in first fit place ( relocate -  NEXT DOES NOT AVAILABLE)	OUR TEST
-	cprintf("   3.4 reallocate in first fit place ( relocate -  NEXT DOES NOT AVAILABLE)\n\n") ;
+	//3.4 reallocate in first fit place ( relocate -  NEXT IS NOT AVAILABLE)	OUR TEST
+	cprintf("   3.4 reallocate in first fit place ( relocate -  NEXT IS NOT AVAILABLE)\n\n") ;
 	is_correct = 1;
 	{
 		blockIndex = ((3*allocCntPerSize)+1);
@@ -1464,7 +1465,7 @@ void test_realloc_block_FF()
 
 	//[4] Test realloc with decreased sizes
 	cprintf("4: Test calling realloc with decreased sizes.[30%]\n\n") ;
-	//[4.1] next block is full (NO coalesce)
+	//[4.1] next block is full (NO coalesce) BLOCK SPLITS INTO TWO BLOCKS ONE OF THEM IS FREE
 	cprintf("	4.1: next block is full (NO coalesce)\n\n") ;
 	is_correct = 1;
 	{
@@ -1508,18 +1509,10 @@ void test_realloc_block_FF()
 			cprintf("test_realloc_block_FF #14.5: WRONG REALLOC! content of the block is not correct. Expected %d\n", blockIndex);
 		}
 	}
-	//[4.2] next block is free (splite and merge)
+	//[4.2] next block is free (splite and merge) (HEAD) BLOCK SIZE DEC AND MERGING THE REMAINING SIZE WITH THE FREE NEXT
 	cprintf("	4.2: next block is free (splite and merge)\n\n") ;
 	is_correct = 1;
 	{
-		//struct BlockMetaData * element;
-		//LIST_FOREACH(element , &metaData)
-		//{
-			//cprintf("The Address of the block = %x\n" , element);
-			//cprintf("The Size of the block = %d\n" , element->size);
-			//cprintf(" Block is free = %d\n\n" , element->is_free);
-		//}
-
 		blockIndex = 0;
 		new_size = allocSizes[3] - sizeOfMetaData();
 		//cprintf("REALLOCATE to size %d\n",new_size ) ;
@@ -1566,6 +1559,7 @@ void test_realloc_block_FF()
 	cprintf("test realloc_block with FIRST FIT completed. Evaluation = %d%\n", eval);
 
 }
+
 
 void test_realloc_block_FF_COMPLETE()
 {
