@@ -85,6 +85,7 @@ void print_blocks_list(struct MemBlock_LIST list)
 //==================================
 // [1] INITIALIZE DYNAMIC ALLOCATOR:
 //==================================
+
 void initialize_dynamic_allocator(uint32 daStart, uint32 initSizeOfAllocatedSpace)
 {
 	//=========================================
@@ -94,28 +95,14 @@ void initialize_dynamic_allocator(uint32 daStart, uint32 initSizeOfAllocatedSpac
 	//=========================================
 	//=========================================
 
-	//int* kh_ptr = (int*)KERNEL_HEAP_START;
-	//int* kb_ptr = (int*)KERNEL_BASE;
-	//int* ds_ptr = (int*)daStart;
-
 	//TODO: [PROJECT'23.MS1 - #5] [3] DYNAMIC ALLOCATOR - initialize_dynamic_allocator()
 	//panic("initialize_dynamic_allocator is not implemented yet");
-	//cprintf("daStart --- > %d\n", daStart);
-	//cprintf("initSizeOfAllocatedSpace is %d\n", initSizeOfAllocatedSpace);
-
-	//long long kernel_heap_size = (KERNEL_HEAP_START - KERNEL_BASE);
-	//cprintf("The size of the heap is %d ", kernel_heap_size);
-	if(  daStart >=  KERNEL_HEAP_START &&  daStart <= KERNEL_HEAP_MAX){
-
-		//LIST_INIT(&metaData); --> this line does not affect the run but we will see after implementing the rest
-		//cprintf("Have entered the if condition " );
+	if(  daStart >=  KERNEL_HEAP_START &&  daStart <= KERNEL_HEAP_MAX)
+	{
 		struct BlockMetaData *meta = ((struct BlockMetaData *) daStart) ;
 		meta->is_free = 1;
 		meta->size = initSizeOfAllocatedSpace;
-		//meta->prev_next_info.le_next =
-		//cprintf(" Address of meta is %x\n meta.size = %d\n meta.is_free = %d\n" , meta , meta->size , meta->is_free );
 		LIST_INSERT_HEAD(&metaData, meta);
-		//daStart++;
 	}
 }
 
@@ -186,63 +173,55 @@ void *alloc_block_BF(uint32 size)
 	int NeedSbrk = 1;
 	struct BlockMetaData * element;
 	LIST_FOREACH(element , &metaData)
-			{
-			if( element->is_free == 1 && (element->size) == required_size_to_be_allocated)
-			{
-					element->is_free =0;
-					element->size  = required_size_to_be_allocated;
-					NeedSbrk=0;
-					return element+1;
-			}
-
-			}
-	int var = 0;
-	struct BlockMetaData * flag;
-		LIST_FOREACH(element , &metaData)
+	{
+		if( element->is_free == 1 && (element->size) == required_size_to_be_allocated)
 		{
-
-			 if (element->is_free == 1 && (element->size) > required_size_to_be_allocated)
-			 {
-				 var = (element->size - required_size_to_be_allocated );
-				 if(var < min)
-				 {
-					 cprintf("var=%d\n",var);
-					 min = var;
-					 NeedSbrk = 0;
-				 }
-			 }
-
+			element->is_free =0;
+			element->size  = required_size_to_be_allocated;
+			NeedSbrk=0;
+			return (void *)element + sizeOfMetaData();
 		}
-		LIST_FOREACH(element , &metaData)
-				{
-					 if ((element->size - required_size_to_be_allocated)==var)
-					 {
-//						 if(var<sizeOfMetaData())
-//						 {
-//							element->is_free =0;
-//							element->size  = required_size_to_be_allocated + var;
-//							NeedSbrk=0;
-//							return element+1;
-//						 }
-						element->is_free =0;
-						void * address = (void *)element +required_size_to_be_allocated;
-						cprintf("the address is %x\n",address);
-						struct BlockMetaData * newMetadata = (struct BlockMetaData *)address;
-						cprintf("the address is %x\n",address);
-						newMetadata->is_free = 1;
-						newMetadata->size = (element->size) - (required_size_to_be_allocated);
-						LIST_INSERT_AFTER(&metaData,element,newMetadata);
-						element->size = required_size_to_be_allocated;
-						//cprintf("The address of the new meta data = %x\n" , newMetadata);
-						cprintf("The address of the block found  = %x\n" , element);
 
-						void * returned_va = (void *)element + sizeOfMetaData();
-						//cprintf("The address of the returned block  = %x\n" , returned_va);
-						return returned_va;
-						NeedSbrk=0;
-					 }
+	}
+	int var = 0;
+	LIST_FOREACH(element , &metaData)
+	{
 
-				}
+		 if (element->is_free == 1 && (element->size) > required_size_to_be_allocated)
+		 {
+			 var = (element->size - required_size_to_be_allocated );
+			 if(var < min)
+			 {
+				 //cprintf("var=%d\n",var);
+				 min = var;
+				 NeedSbrk = 0;
+			 }
+		 }
+
+	}
+	LIST_FOREACH(element , &metaData)
+	{
+		if ((element->size - required_size_to_be_allocated) == var)
+		{
+			if(var < sizeOfMetaData())
+			{
+				element->is_free =0;
+				element->size  = required_size_to_be_allocated + var;
+				NeedSbrk=0;
+				return (void *)element + sizeOfMetaData();
+			}
+			element->is_free = 0;
+			void * address = (void *)element + required_size_to_be_allocated;
+			struct BlockMetaData * newMetadata = (struct BlockMetaData *)address;
+			newMetadata->is_free = 1;
+			newMetadata->size = var;
+			LIST_INSERT_AFTER(&metaData,element,newMetadata);
+			element->size = required_size_to_be_allocated;
+			void * returned_va = (void *)element + sizeOfMetaData();
+			return returned_va;
+		 }
+
+	}
 
 
     if (NeedSbrk == 1)
@@ -291,80 +270,71 @@ void free_block(void *va)
 	{
 		void * ptr_void = va - sizeOfMetaData();
 		struct BlockMetaData * ptr_to_deleted = (struct BlockMetaData *)ptr_void;
-		cprintf("Before ifs \n");
 		struct BlockMetaData * ptr_to_before = LIST_PREV(ptr_to_deleted);
 		struct BlockMetaData * ptr_to_after = LIST_NEXT(ptr_to_deleted);
 		if(ptr_to_deleted == LIST_FIRST(&metaData))
 		{
 			if((ptr_to_after->is_free) == 0)
 			{
-				cprintf("Entered  if only head and next is not free \n");
 				(ptr_to_deleted->is_free)= 1;
 			}
 			else if ((ptr_to_after->is_free) == 1)
 			{
-				cprintf("Entered  if only head and next is free \n");
 				ptr_to_deleted->is_free=1;
 				ptr_to_deleted->size = (ptr_to_deleted->size) + (ptr_to_after->size);
 				ptr_to_after->is_free=0;
 				ptr_to_after->size=0;
-				//LIST_REMOVE(&metaData,ptr_to_after);
+				LIST_REMOVE(&metaData , ptr_to_after);
 			}
 		}
 		else if (ptr_to_deleted == LIST_LAST(&metaData))
 		{
 			if((ptr_to_before->is_free) == 0)
 			{
-				cprintf("Entered  if only tail and next is not free \n");
 				(ptr_to_deleted->is_free)= 1;
 			}
 			else if ((ptr_to_before->is_free) == 1)
 			{
-				cprintf("Entered  if only tail and next is free \n");
 				ptr_to_before->size = (ptr_to_deleted->size) + (ptr_to_before->size);
 				ptr_to_deleted->size = 0;
 				ptr_to_deleted->is_free=0;
-				//LIST_REMOVE(&metaData,ptr_to_deleted);
+				LIST_REMOVE(&metaData , ptr_to_deleted);
 			}
 		}
 		else if ((ptr_to_after->is_free) == 0 &&(ptr_to_before->is_free) == 0)
 		{
 			// up  and down are full
-			cprintf("Entered  if \n");
 			(ptr_to_deleted->is_free)= 1;
-
 		}
 		else if ((ptr_to_after->is_free) == 1 &&(ptr_to_before->is_free) == 0)
 		{
 			// up is free
-			cprintf("Entered  if up\n");
 			(ptr_to_deleted->size)= (ptr_to_deleted->size) + (ptr_to_after->size);
 			(ptr_to_deleted->is_free) = 1;
 			ptr_to_after->is_free=0;
 			ptr_to_after->size=0;
-			//LIST_REMOVE(&metaData,ptr_to_after);
+			LIST_REMOVE(&metaData , ptr_to_after);
 
 		}
 		else if ((ptr_to_after->is_free) == 0 &&((ptr_to_before)->is_free) == 1)
 		{
 			// down is free
-			cprintf("Entered  if down\n");
 			((ptr_to_before)->size) =  ((ptr_to_before)->size) + (ptr_to_deleted->size);
 			ptr_to_deleted->is_free=0;
 			ptr_to_deleted->size=0;
-			//LIST_REMOVE(&metaData,(ptr_to_deleted));
+			LIST_REMOVE(&metaData , ptr_to_deleted);
 		}
 		else if (((ptr_to_after)->is_free) == 1 &&((ptr_to_before)->is_free) == 1)
 		{
 			// both are free
-			cprintf("Entered  if up and down\n");
 			((ptr_to_before)->size ) = ((ptr_to_before)->size)  + (ptr_to_deleted->size) + ((ptr_to_after)->size);
 			ptr_to_after->is_free=0;
 			ptr_to_after->size=0;
 			ptr_to_deleted->is_free=0;
 			ptr_to_deleted->size=0;
-			//LIST_REMOVE(&metaData,ptr_to_after);
-			//LIST_REMOVE(&metaData,(ptr_to_deleted));
+			LIST_REMOVE(&metaData , ptr_to_deleted);
+			LIST_REMOVE(&metaData , ptr_to_after);
+
 		}
 	}
 }
@@ -379,118 +349,39 @@ void *realloc_block_FF(void* va, uint32 new_size)
 	uint32 size = new_size + sizeOfMetaData();
 	void * ptr_void = va - sizeOfMetaData();
 	struct BlockMetaData * ptr_to_be_changed = (struct BlockMetaData *)ptr_void;
-	struct BlockMetaData * ptr_to_be_changed_before = LIST_PREV(ptr_to_be_changed);
 	struct BlockMetaData * ptr_to_be_changed_after = LIST_NEXT(ptr_to_be_changed);
 	if ( va == NULL &&  new_size== 0)
 	{
-		//cprintf("The va = null and new size = 0\n");
+		//TEST 1 DONE
+		cprintf("The virtual address is NULL and size = 0 \n");
 		return NULL;
 	}
 	else if(va == NULL && new_size > 0)
 	{
-		//cprintf("The va is null only\n");
+		//TEST 2 DONE
+		cprintf("The virtual address is NULL and size > 0\n");
 		return alloc_block_FF(new_size);
 
 	}
 	else if (va != NULL && new_size == 0)
 	{
-		//cprintf("The new size = 0 only\n");
+		//TEST 2 DONE
+		cprintf("The new size = 0 only\n");
 		free_block(va);
 		return NULL;
 	}
-	//HEAD
-	else if(ptr_to_be_changed == LIST_FIRST(&metaData))
-	{
-		cprintf("The pointer is the head\n");
-		if(ptr_to_be_changed->size > size && ptr_to_be_changed_after->is_free ==0)
-		{
-			//SIZED DEC , SPLIT , next not available
-			cprintf("The size is small in head\n");
-			void * address = ptr_void + size;
-			uint32 remianing_size = ptr_to_be_changed->size - size;
-			if (remianing_size >= sizeOfMetaData())
-			{
-				struct BlockMetaData * new_metadata = (struct BlockMetaData * ) address;
-				new_metadata->is_free = 1;
-				new_metadata->size = ptr_to_be_changed->size - size;
-				ptr_to_be_changed->size = size;
-				LIST_INSERT_AFTER(&metaData,ptr_to_be_changed,new_metadata);
-			}
-			return va;
-		}
-		else if(ptr_to_be_changed->size > size && ptr_to_be_changed_after->is_free == 1)
-		{
-			//SIZED DEC , SPLIT , merge
-			//splite
-			cprintf("The size is small in head\n");
-			void * address = ptr_void + size;
-			struct BlockMetaData * new_metadata = (struct BlockMetaData * ) address;
-			new_metadata->is_free=1;
-			new_metadata->size = ptr_to_be_changed->size - size;
-			cprintf("The new metadata size before merging =  %d\n",new_metadata->size);
-			ptr_to_be_changed->size = size;
-			LIST_INSERT_AFTER(&metaData,ptr_to_be_changed,new_metadata);
-
-			//merge
-			new_metadata->size  = new_metadata->size + ptr_to_be_changed_after->size;
-			cprintf("The size of next = %d\n" , ptr_to_be_changed_after->size);
-			cprintf("The new metadata size after merging =  %d\n",new_metadata->size);
-			ptr_to_be_changed_after->size=0;
-			ptr_to_be_changed_after->is_free=0;
-
-			return va;
-		}
-		else if ((ptr_to_be_changed->size + ptr_to_be_changed_after->size) < size && ptr_to_be_changed_after->is_free==1)
-		{
-			//SIZED INC ,SIZE NOT AVAILABLE
-			cprintf("The pointer is in head and does not fit with the next\n");
-			free_block(va);
-			void * returned_ptr = alloc_block_FF(new_size);
-			return returned_ptr;
-		}
-		else if ((ptr_to_be_changed->size + ptr_to_be_changed_after->size) > size && ptr_to_be_changed_after->is_free==1)
-		{
-			//SIZED INC , SIZE AVAILABLE,SPLITE
-			cprintf("The pointer is in head and fits with the next\n");
-			void * address = ptr_void + size;
-			uint32 remaining_size = (ptr_to_be_changed->size + ptr_to_be_changed_after->size) - size;
-			if(remaining_size >= sizeOfMetaData())
-			{
-				struct BlockMetaData * new_metadata = (struct BlockMetaData * ) address;
-				new_metadata->is_free=1;
-				new_metadata->size = (ptr_to_be_changed->size + ptr_to_be_changed_after->size) - size;
-				ptr_to_be_changed->size = size;
-				LIST_INSERT_AFTER(&metaData,ptr_to_be_changed_after,new_metadata);
-				ptr_to_be_changed_after->is_free=0;
-				ptr_to_be_changed_after->size=0;
-			}
-			else
-			{
-				ptr_to_be_changed->size += ptr_to_be_changed_after->size;
-				ptr_to_be_changed_after->is_free=0;
-				ptr_to_be_changed_after->size=0;
-			}
-			return va;
-		}
-		else if (ptr_to_be_changed->size < size &&ptr_to_be_changed_after->is_free==0)
-		{
-			//SIZED INC , NEXT NOT AVAILABLE
-			cprintf("The pointer is in head  and the next is not free\n");
-			free_block(va);
-			void * returned_ptr = alloc_block_FF(new_size);
-			return returned_ptr;
-		}
-	}
-	//in middle COMPARE WITH NEXT
+	//HEAD OR IN THE MIDDLE
 	else if (ptr_to_be_changed->size == size)
 	{
-		cprintf("Nothing will happen\n");
+		// TEST 3.2 DONE
+		cprintf("Nothing will happen , size  is not change\n");
 		return va;
 	}
 	else if (ptr_to_be_changed->size > size && ptr_to_be_changed_after->is_free == 0)
 	{
-		//SIZE DEC , SPLITE , NEXT IS NOT FREE
-		//cprintf("The size is small\n");
+		//SIZE DEC , SPLITE , NEXT IS NOT FREE DONE
+		// TEST 4.1
+		cprintf("SIZE DEC , SPLITE , NEXT IS NOT FREE\n");
 		void * address = ptr_void + size;
 		uint32 remaining_size = ptr_to_be_changed->size -size;
 		if (remaining_size >= sizeOfMetaData())
@@ -505,60 +396,60 @@ void *realloc_block_FF(void* va, uint32 new_size)
 	}
 	else if (ptr_to_be_changed->size > size && ptr_to_be_changed_after->is_free == 1)
 	{
-		//SIZED DEC , SPLIT , MERGE
-
-		//splite
-		//cprintf("The size is small in head\n");
+		//SIZED DEC , SPLIT , MERGE WITH THE NEXT DONE
+		//TEST 4.2
+		cprintf("SIZED DEC , SPLIT , MERGE WITH THE NEXT\n");
 		void * address = ptr_void + size;
 		struct BlockMetaData * new_metadata = (struct BlockMetaData * ) address;
 		new_metadata->is_free=1;
-		new_metadata->size = ptr_to_be_changed->size - size;
+		new_metadata->size = (ptr_to_be_changed->size - size) + ptr_to_be_changed_after->size;
 		ptr_to_be_changed->size = size;
 		LIST_INSERT_AFTER(&metaData,ptr_to_be_changed,new_metadata);
-
-		//merge
-		new_metadata->size += ptr_to_be_changed_after->size;
-		ptr_to_be_changed_after->size=0;
 		ptr_to_be_changed_after->is_free=0;
-
+		ptr_to_be_changed_after->size=0;
+		LIST_REMOVE(&metaData , ptr_to_be_changed_after);
 		return va;
 	}
-	else if ((ptr_to_be_changed->size + ptr_to_be_changed_after->size) > size && ptr_to_be_changed_after->is_free==1)
+	else if ((ptr_to_be_changed->size + ptr_to_be_changed_after->size) >= size && ptr_to_be_changed_after->is_free==1)
 	{
-		// SIZE INC , AVAILABLE , SPLITE
-		//cprintf("fits with the next\n");
+		// SIZE INC , AVAILABLE , SPLITE OR TAKE THEM ALL DONE
+		cprintf("SIZE INC , NEXT IS AVAILABLE , SPLITE\n");
 		void * address = ptr_void + size;
 		uint32 remaining_size = (ptr_to_be_changed->size + ptr_to_be_changed_after->size) - size;
 		if(remaining_size >= sizeOfMetaData())
 		{
 			struct BlockMetaData * new_metadata = (struct BlockMetaData * ) address;
 			new_metadata->is_free=1;
-			new_metadata->size = (ptr_to_be_changed->size + ptr_to_be_changed_before->size) - size;
+			new_metadata->size = (ptr_to_be_changed->size + ptr_to_be_changed_after->size) - size;
 			ptr_to_be_changed->size = size;
 			LIST_INSERT_AFTER(&metaData,ptr_to_be_changed_after,new_metadata);
 			ptr_to_be_changed_after->is_free=0;
 			ptr_to_be_changed_after->size=0;
+			LIST_REMOVE(&metaData , ptr_to_be_changed_after);
 		}
 		else
 		{
 			ptr_to_be_changed->size += ptr_to_be_changed_after->size;
 			ptr_to_be_changed_after->is_free=0;
 			ptr_to_be_changed_after->size=0;
+			LIST_REMOVE(&metaData , ptr_to_be_changed_after);
 		}
 		return va;
 	}
 	else if ((ptr_to_be_changed->size + ptr_to_be_changed_after->size) < size && ptr_to_be_changed_after->is_free==1)
 	{
-		// SIZE INC , NEXT AVAILABLE , BUT SIZE DOESNT FIT
-		cprintf("does not fit with the next\n");
+		// SIZE INC , NEXT AVAILABLE , BUT SIZE DOESNT FIT DONE
+		// TEST 3.3
+		cprintf("SIZE INC , NEXT AVAILABLE , BUT SIZE DOESNT FIT\n");
 		free_block(va);
 		void * returned_ptr = alloc_block_FF(new_size);
 		return returned_ptr;
 	}
-	else if (ptr_to_be_changed->size < size &&ptr_to_be_changed_after->is_free==0)
+	else if (ptr_to_be_changed->size < size && ptr_to_be_changed_after->is_free==0)
 	{
-		// SIZE INC , NEXT NOT AVAILABLE
-		cprintf("next is not free\n");
+		// SIZE INC , NEXT NOT AVAILABLE DONE
+		// TEST 3.4
+		cprintf("SIZE INC , NEXT NOT AVAILABLE\n");
 		free_block(va);
 		void * returned_ptr = alloc_block_FF(new_size);
 		return returned_ptr;
