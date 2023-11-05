@@ -154,6 +154,22 @@ void *alloc_block_FF(uint32 size)
 		{
 			return NULL;
 		}
+		else
+		{
+			element->is_free =0;
+			void * address = (void *)element +required_size_to_be_allocated;
+			uint32 remaining_size = (element->size) - required_size_to_be_allocated;
+			if(remaining_size >= sizeOfMetaData())
+			{
+				struct BlockMetaData * newMetadata = (struct BlockMetaData *)address;
+				newMetadata->is_free = 1;
+				newMetadata->size = (element->size) - (required_size_to_be_allocated);
+				LIST_INSERT_AFTER(&metaData,element,newMetadata);
+				element->size = required_size_to_be_allocated;
+			}
+			void * returned_va = (void *)element + sizeOfMetaData();
+			return returned_va;
+		}
 	}
 	return NULL;
 }
