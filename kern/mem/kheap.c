@@ -83,8 +83,14 @@ unsigned int kheap_physical_address(unsigned int virtual_address)
 	//TODO: [PROJECT'23.MS2 - #06] [1] KERNEL HEAP - kheap_physical_address()
 	//refer to the project presentation and documentation for details
 	// Write your code here, remove the panic and write your code
-	panic("kheap_physical_address() is not implemented yet...!!");
-
+	//panic("kheap_physical_address() is not implemented yet...!!");
+	if(virtual_address >=KERNEL_HEAP_START && virtual_address <=KERNEL_HEAP_MAX)
+	{
+		uint32 *ptr_page_table;
+		struct FrameInfo * frame = get_frame_info(ptr_page_directory,virtual_address,&ptr_page_table);
+		uint32 physical_address = to_physical_address(frame);
+		return (unsigned int)physical_address;
+	}
 	//change this "return" according to your answer
 	return 0;
 }
