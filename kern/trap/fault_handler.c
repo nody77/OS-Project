@@ -88,8 +88,22 @@ void page_fault_handler(struct Env * curenv, uint32 fault_va)
 		//cprintf("PLACEMENT=========================WS Size = %d\n", wsSize );
 		//TODO: [PROJECT'23.MS2 - #15] [3] PAGE FAULT HANDLER - Placement
 		// Write your code here, remove the panic and write your code
-		panic("page_fault_handler().PLACEMENT is not implemented yet...!!");
-
+		//panic("page_fault_handler().PLACEMENT is not implemented yet...!!");
+		struct FrameInfo * frame_to_be_allcoated;
+		int return_frame_allocation = allocate_frame(&frame_to_be_allcoated);
+		if (return_frame_allocation == 0)
+		{
+			int return_map_allcoation = map_frame(ptr_page_directory ,frame_to_be_allcoated, fault_va,(PERM_PRESENT|PERM_USED));
+			if (return_map_allcoation == 0 )
+			{
+				int return_read_pageFile = pf_read_env_page(curenv , fault_va);
+				if(return_read_pageFile == E_PAGE_NOT_EXIST_IN_PF)
+				{
+					// check if the page file is a stack or heap or illegal access
+				}
+				//update the working set list to add the new frame
+			}
+		}
 		//refer to the project presentation and documentation for details
 	}
 	else
