@@ -16,8 +16,55 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 	//	Otherwise (if no memory OR initial size exceed the given limit): E_NO_MEM
 
 	//Comment the following line(s) before start coding...
-	panic("not implemented yet");
+	//panic("not implemented yet");
+	
+	int no_memory = 0;
+	int initial_size_exceed_the_given_limit = 0;
+
+
+	cprintf("daStart = %x\n",daStart);
+	cprintf("====================================\n");
+	cprintf("initSizeToAllocate =%d\n",initSizeToAllocate);
+	cprintf("====================================\n");
+	cprintf("daLimit =%x\n",daLimit);
+	cprintf("====================================\n");
+
+
+	Start=(uint32*)daStart;
+	HardLimit=(uint32*)daLimit;
+	SegmentBreak=(uint32*) (daStart + initSizeToAllocate) ;
+
+	cprintf("Start = %x\n",Start);
+	cprintf("====================================\n");
+	cprintf("SegmentBreak =%x\n",SegmentBreak);
+	cprintf("====================================\n");
+	cprintf("HardLimit =%x\n",HardLimit);
+	cprintf("====================================\n");
+	int noOfPages = initSizeToAllocate/PAGE_SIZE;
+	cprintf("noOfPages = %d\n",noOfPages);
+	cprintf("====================================\n");
+
+//	initialize_paging();
+//
+//	for(int i = 0 ; i<noOfPages ; i++)
+//	{
+//	   struct FrameInfo *ptr_frame_info ;
+//	   allocate_frame(&ptr_frame_info);
+//
+//	}
+
+	//initialize_dynamic_allocator(daStart,initSizeToAllocate);
+
+	//int num = ROUNDUP(initSizeToAllocate,PAGE_SIZE);
+
+
+
+	if(no_memory == 1 || initial_size_exceed_the_given_limit ==1)
+	{
+		return E_NO_MEM;
+	}
 	return 0;
+	
 }
 
 void* sbrk(int increment)
