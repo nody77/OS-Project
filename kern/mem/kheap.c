@@ -69,7 +69,39 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 
 void* sbrk(int increment)
 {
+	
 	//TODO: [PROJECT'23.MS2 - #02] [1] KERNEL HEAP - sbrk()
+	if(increment > 0){
+		int num_of_kilos = ROUNDUP(increment , 4); // size is the rounded up value of the increment
+		int size = num_of_kilos * (PAGE_SIZE/4);
+		uint32 * returnedBreak = SegmentBreak;
+		for(int i = 0; i < increment ; i++ ){
+			
+			//struct FrameInfo *frame_to_be_allocated = get_frame_info(ptr_page_directory , SegmentBreak, )
+			if(SegmentBreak >= HardLimit){
+				panic("Invalid Access !!");
+			}
+			else{
+				struct FrameInfo * frame_to_be_allocated ;
+				if(allocate_frame(&frame_to_be_allocated) == NULL){
+					
+					panic("Memory is full !!");
+				}
+				else{
+					int perm = (~PERM_AVAILABLE) & (~PERM_BUFFERED) & (~PERM_MODIFIED) & PERM_PRESENT & PERM_USED & (~ PERM_USER) & PERM_WRITEABLE;
+					map_frame(ptr_page_directory , frame_to_be_allocated, (uint32) SegmentBreak, perm);
+					SegmentBreak = SegmentBreak + size;
+					return (void *)returnedBreak;
+				}
+			}
+		}
+	}
+	else if (increment < 0){
+
+	}
+	else {
+		return (void *) SegmentBreak;
+	}
 	/* increment > 0: move the segment break of the kernel to increase the size of its heap,
 	 * 				you should allocate pages and map them into the kernel virtual address space as necessary,
 	 * 				and returns the address of the previous break (i.e. the beginning of newly mapped memory).
