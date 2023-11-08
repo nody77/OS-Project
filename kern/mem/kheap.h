@@ -43,7 +43,10 @@ int numOfKheapVACalls ;
 
 /*2023*/
 //TODO: [PROJECT'23.MS2 - #01] [1] KERNEL HEAP - initialization: add suitable code here
-
+//pointer to start , pointer to segment break , pointer to hard limit
+uint32 *Start;
+uint32 *SegmentBreak;
+uint32 *HardLimit;
 //====================================================================================
 
 #endif // FOS_KERN_KHEAP_H_
