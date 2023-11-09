@@ -17,9 +17,9 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 
 	//Comment the following line(s) before start coding...
 	//panic("not implemented yet");
-	
-	int no_memory = 0;
-	int initial_size_exceed_the_given_limit = 0;
+
+
+	int initial_size_exceed_the_given_limit = 0;//Boolean to check if no memory
 
 
 	cprintf("daStart = %x\n",daStart);
@@ -31,8 +31,9 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 
 
 	Start=(uint32*)daStart;
-	HardLimit=(uint32*)daLimit;
 	SegmentBreak=(uint32*) (daStart + initSizeToAllocate) ;
+	HardLimit=(uint32*)daLimit;
+
 
 	cprintf("Start = %x\n",Start);
 	cprintf("====================================\n");
@@ -40,31 +41,37 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 	cprintf("====================================\n");
 	cprintf("HardLimit =%x\n",HardLimit);
 	cprintf("====================================\n");
-	int noOfPages = initSizeToAllocate/PAGE_SIZE;
+
+	if(SegmentBreak > HardLimit)
+		{
+		  return E_NO_MEM;
+		}
+
+	int noOfPages = ROUNDUP(initSizeToAllocate,PAGE_SIZE) / PAGE_SIZE;
 	cprintf("noOfPages = %d\n",noOfPages);
 	cprintf("====================================\n");
 
-//	initialize_paging();
-//
-//	for(int i = 0 ; i<noOfPages ; i++)
-//	{
-//	   struct FrameInfo *ptr_frame_info ;
-//	   allocate_frame(&ptr_frame_info);
-//
-//	}
-
-	//initialize_dynamic_allocator(daStart,initSizeToAllocate);
-
-	//int num = ROUNDUP(initSizeToAllocate,PAGE_SIZE);
-
-
-
-	if(no_memory == 1 || initial_size_exceed_the_given_limit ==1)
+	uint32 va =daStart ;
+	for(int i = 0 ; i <noOfPages ; i++)
 	{
-		return E_NO_MEM;
+		//1)allocate
+		struct FrameInfo * ptr = NULL;
+		int ret = allocate_frame(&ptr);
+		if (ret != E_NO_MEM )
+		{
+			//uint32 pa = to_physical_address(ptr);
+			//2)map
+			map_frame(ptr_page_directory,ptr,va,PERM_WRITEABLE);//wrong permission for now
+			va = va + PAGE_SIZE;
+		}
+		else
+		{
+			return E_NO_MEM;
+		}
+
 	}
+	initialize_dynamic_allocator(daStart,initSizeToAllocate);
 	return 0;
-	
 }
 
 void* sbrk(int increment)
