@@ -143,10 +143,29 @@ void* kmalloc(unsigned int size)
 
 void kfree(void* virtual_address)
 {
+	uint32 *vir_address =  (uint32 *)virtual_address;
+	uint32 va = (uint32)virtual_address;
+	uint32 HARD_LIMIT = (uint32)HardLimit;
 	//TODO: [PROJECT'23.MS2 - #04] [1] KERNEL HEAP - kfree()
 	//refer to the project presentation and documentation for details
 	// Write your code here, remove the panic and write your code
-	panic("kfree() is not implemented yet...!!");
+	if(va >= KERNEL_HEAP_START && va < HARD_LIMIT)
+	{
+		free_block(virtual_address);
+	}
+	else if(va >= HARD_LIMIT + PAGE_SIZE && va < KERNEL_HEAP_MAX)
+	{
+		//just brainstorming..
+		unmap_frame(ptr_page_directory, va);
+		uint32 *ptr_page_table;
+		struct FrameInfo * frame = get_frame_info(ptr_page_directory,va,&ptr_page_table);
+		free_frame(frame);
+	}
+	else
+	{
+		panic("invalid address");
+	}
+	//panic("kfree() is not implemented yet...!!");
 }
 
 unsigned int kheap_virtual_address(unsigned int physical_address)
