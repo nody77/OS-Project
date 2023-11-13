@@ -482,7 +482,7 @@ void* sys_sbrk(int increment)
 {
 	//TODO: [PROJECT'23.MS2 - #08] [2] USER HEAP - Block Allocator - sys_sbrk() [Kernel Side]
 	//MS2: COMMENT THIS LINE BEFORE START CODING====
-	return (void*)-1 ;
+	//return (void*)-1 ;
 	//====================================================
 
 	/*2023*/
@@ -499,15 +499,46 @@ void* sys_sbrk(int increment)
 	 * 	2) New segment break should be aligned on page-boundary to avoid "No Man's Land" problem
 	 * 	3) As in real OS, allocate pages lazily. While sbrk moves the segment break, pages are not allocated
 	 * 		until the user program actually tries to access data in its heap (i.e. will be allocated via the fault handler).
-	 * 	4) Allocating additional pages for a process heap will fail if, for example, the free frames are exhausted
+	 * 	4) Allocating additional pages for a process’ heap will fail if, for example, the free frames are exhausted
 	 * 		or the break exceed the limit of the dynamic allocator. If sys_sbrk fails, the net effect should
 	 * 		be that sys_sbrk returns (void*) -1 and that the segment break and the process heap are unaffected.
 	 * 		You might have to undo any operations you have done so far in this case.
 	 */
-	struct Env* env = curenv; //the current running Environment to adjust its break limit
 
+	//NOT DONE YET
+	struct Env* env = curenv; //the current running Environment to adjust its break limit
+	if (increment > 0)
+	{
+		uint32 requiredSize;
+		if(increment%PAGE_SIZE == 0)
+		{
+			requiredSize = increment;
+		}
+		else
+		{
+			requiredSize = ROUNDUP(increment,PAGE_SIZE);
+		}
+		if(requiredSize+env->segmentBreak <= env->hardLimit)
+		{
+			uint32* oldBreak = env->segmentBreak;
+			env->segmentBreak = requiredSize+env->segmentBreak;
+			return oldBreak;
+		}
+	}
+	else if (increment == 0)
+	{
+		return env->segmentBreak;
+	}
+	else if(increment<0)
+	{
+		env->segmentBreak = env->segmentBreak - increment ;
+		return env->segmentBreak;
+	}
+
+	return -1 ;
 
 }
+
 
 /**************************************************************************/
 /************************* SYSTEM CALLS HANDLER ***************************/
