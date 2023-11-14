@@ -535,7 +535,7 @@ void* sys_sbrk(int increment)
 		return env->segmentBreak;
 	}
 
-	return -1 ;
+	return (void *)-1 ;
 
 }
 
