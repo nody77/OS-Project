@@ -29,11 +29,9 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 	cprintf("daLimit =%x\n",daLimit);
 	cprintf("====================================\n");
 
-
 	Start=(uint32*)daStart;
 	SegmentBreak=(uint32*) (daStart + initSizeToAllocate) ;
 	HardLimit=(uint32*)daLimit;
-
 
 	cprintf("Start = %x\n",Start);
 	cprintf("====================================\n");
@@ -46,12 +44,12 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 		{
 		  return E_NO_MEM;
 		}
-
 	int noOfPages = ROUNDUP(initSizeToAllocate,PAGE_SIZE) / PAGE_SIZE;
 	cprintf("noOfPages = %d\n",noOfPages);
 	cprintf("====================================\n");
-
+	
 	uint32 va =daStart ;
+
 	for(int i = 0 ; i <noOfPages ; i++)
 	{
 		//1)allocate
@@ -60,19 +58,24 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 		if (ret != E_NO_MEM )
 		{
 			//uint32 pa = to_physical_address(ptr);
+
 			//2)map
 			map_frame(ptr_page_directory,ptr,va,PERM_WRITEABLE);//wrong permission for now
 			va = va + PAGE_SIZE;
+
 		}
 		else
 		{
 			return E_NO_MEM;
 		}
 
+
+
 	}
 	initialize_dynamic_allocator(daStart,initSizeToAllocate);
 	return 0;
 }
+
 
 void* sbrk(int increment)
 {
