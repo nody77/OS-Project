@@ -26,10 +26,10 @@ inline struct WorkingSetElement* env_page_ws_list_create_element(struct Env* e, 
 	}else{
 		// Create a new object of struct WorkingSetElement
 		//Initialize it by the given virtual address
-		struct WorkingSetElement* newElement;
+		struct WorkingSetElement* newElement=NULL;
 		newElement->virtual_address=virtual_address;
-		// newElement->prev_next_info.le_next=NULL;
-		// newElement->prev_next_info.le_prev=NULL;
+//		newElement->prev_next_info.le_next=NULL;
+//		newElement->prev_next_info.le_prev=NULL;
 		return newElement;
 	}
 }
