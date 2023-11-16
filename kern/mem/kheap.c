@@ -140,7 +140,36 @@ void* kmalloc(unsigned int size)
 	// use "isKHeapPlacementStrategyFIRSTFIT() ..." functions to check the current strategy
 
 	//change this "return" according to your answer
-	kpanic_into_prompt("kmalloc() is not implemented yet...!!");
+	//kpanic_into_prompt("kmalloc() is not implemented yet...!!");
+	if (size < DYN_ALLOC_MAX_BLOCK_SIZE)
+	{
+		void * va = alloc_block_FF(size);
+		return va;
+	}
+	else
+	{
+		// to be completed
+		uint32 temp_va;
+		if (size % PAGE_SIZE == 0)
+		{
+			uint32 number_of_page_to_be_allocated =(uint32)(size / PAGE_SIZE);
+			void * page_table_va = create_page_table(ptr_page_directory,temp_va);
+			for(uint32 i = 0; i < number_of_page_to_be_allocated; i+=1)
+			{
+				struct FrameInfo * ptr = NULL;
+				int ret = allocate_frame(&ptr);
+				if (ret != E_NO_MEM )
+				{
+					map_frame(ptr_page_directory,ptr,temp_va,(PERM_USED|PERM_PRESENT));	
+				}
+				
+			}
+		}
+		else
+		{
+			uint32 number_of_page_to_be_allocated = (uint32)ROUNDUP(size , PAGE_SIZE)/PAGE_SIZE;
+		}
+	}
 	return NULL;
 }
 
