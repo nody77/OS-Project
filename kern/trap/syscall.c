@@ -556,7 +556,10 @@ uint32 syscall(uint32 syscallno, uint32 a1, uint32 a2, uint32 a3, uint32 a4, uin
 	case SYS_sbrk:
 		return (uint32)sys_sbrk(a1);
 		break;
-
+	// system call for MS2
+	case SYS_to_get_hardlimit:
+		return (uint32)sys_hardlimit(a1);
+		break;
 	case SYS_free_user_mem:
 		if(address != NULL && (a1 < USER_LIMIT - PAGE_SIZE && a1 > 0))
 		{
