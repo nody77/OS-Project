@@ -539,6 +539,13 @@ void* sys_sbrk(int increment)
 
 }
 
+void* sys_hardlimit(uint32 hardlimit)
+{
+	//Comment the following line before start coding...
+	//panic("not implemented yet");
+	// system call MS2
+	return (void *)hardlimit;
+}
 
 /**************************************************************************/
 /************************* SYSTEM CALLS HANDLER ***************************/
@@ -574,13 +581,13 @@ uint32 syscall(uint32 syscallno, uint32 a1, uint32 a2, uint32 a3, uint32 a4, uin
 
 	case SYS_allocate_user_mem:
 		if(address != NULL && (a1 < USER_LIMIT - PAGE_SIZE && a1 > 0))
-			{
-				sys_allocate_user_mem(a1 ,a2);
-			}
-			else
-			{
-				sched_kill_env(curenv->env_id);
-			}
+		{
+			sys_allocate_user_mem(a1 ,a2);
+		}
+		else
+		{
+			sched_kill_env(curenv->env_id);
+		}
 		return 0;
 		break;
 	//=====================================================================
