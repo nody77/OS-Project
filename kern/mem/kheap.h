@@ -7,6 +7,16 @@
 
 #include <inc/types.h>
 
+LIST_HEAD(Page_Allocator_Block, Block);
+struct Page_Allocator_Block block_list;
+
+struct Block
+{
+	//uint32 * va;
+	unsigned int size;
+	int free;
+	LIST_ENTRY(Block) prev_next_info;
+};
 
 /*2017*/
 uint32 _KHeapPlacementStrategy;
