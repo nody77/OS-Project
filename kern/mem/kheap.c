@@ -93,7 +93,8 @@ void* sbrk(int increment)
 			}
 			else{
 				struct FrameInfo * frame_to_be_allocated ;
-				if(allocate_frame(&frame_to_be_allocated) == NULL){
+				int returned_frame = allocate_frame(&frame_to_be_allocated);
+				if(returned_frame != 0){
 					
 					panic("Memory is full !!");
 				}
