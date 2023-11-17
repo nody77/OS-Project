@@ -149,26 +149,88 @@ void* kmalloc(unsigned int size)
 	}
 	else
 	{
-		// to be completed
-		uint32 temp_va;
-		if (size % PAGE_SIZE == 0)
+		if((int)isKHeapPlacementStrategyFIRSTFIT == 1)
 		{
-			uint32 number_of_page_to_be_allocated =(uint32)(size / PAGE_SIZE);
-			void * page_table_va = create_page_table(ptr_page_directory,temp_va);
-			for(uint32 i = 0; i < number_of_page_to_be_allocated; i+=1)
+
+			struct Block * ptr;
+			LIST_FOREACH(ptr,&block_list)
 			{
-				struct FrameInfo * ptr = NULL;
-				int ret = allocate_frame(&ptr);
-				if (ret != E_NO_MEM )
+				if(ptr->size == size && ptr->free == 1)
 				{
-					map_frame(ptr_page_directory,ptr,temp_va,(PERM_USED|PERM_PRESENT));	
+					ptr->size = size;
+					ptr->free = 0;
+					if(size % PAGE_SIZE == 0)
+					{
+						unsigned int number_of_frames = size / PAGE_SIZE;
+						for(unsigned int i=0;i<number_of_frames ;i+=1)
+						{
+							//void * new_page_table = create_page_table(ptr_page_directory,(uint32)ptr);
+							struct FrameInfo * frame;
+							int return_allocation = allocate_frame(&frame);
+							if(return_allocation == 0)
+							{
+								// not sure about permisions
+								int return_mapping = map_frame(ptr_page_directory,frame , (uint32)ptr , PERM_PRESENT);
+							}
+						}
+
+					}
+					else
+					{
+						unsigned int number_of_frames = (unsigned int)(ROUNDUP((uint32)size , (uint32)PAGE_SIZE));
+						for(unsigned int i =0 ; i<number_of_frames;i+=1)
+						{
+							struct FrameInfo * frame;
+							int return_allocation = allocate_frame(&frame);
+							if(return_allocation == 0)
+							{
+								// not sure about permisions
+								int return_mapping = map_frame(ptr_page_directory,frame , (uint32)ptr , PERM_PRESENT);
+							}
+						}
+					}
+					return (void *)ptr;
 				}
-				
+				else if (ptr->size > size && ptr->free == 1)
+				{
+					struct Block * newblock = (struct Block *)(size);
+					newblock->size = ptr->size - size;
+					newblock->free = 1;
+					ptr->size = size;
+					ptr->free = 0;
+					if(size % PAGE_SIZE == 0)
+					{
+						unsigned int number_of_frames = size / PAGE_SIZE;
+						for(unsigned int i=0;i<number_of_frames ;i+=1)
+						{
+							//void * new_page_table = create_page_table(ptr_page_directory,(uint32)ptr);
+							struct FrameInfo * frame;
+							int return_allocation = allocate_frame(&frame);
+							if(return_allocation == 0)
+							{
+								// not sure about permisions
+								int return_mapping = map_frame(ptr_page_directory,frame , (uint32)ptr , PERM_PRESENT);
+							}
+						}
+
+					}
+					else
+					{
+						unsigned int number_of_frames = (unsigned int)ROUNDUP((uint32)size , (uint32)PAGE_SIZE);
+						for(unsigned int i =0 ; i<number_of_frames;i+=1)
+						{
+							struct FrameInfo * frame;
+							int return_allocation = allocate_frame(&frame);
+							if(return_allocation == 0)
+							{
+								// not sure about permisions
+								int return_mapping = map_frame(ptr_page_directory,frame ,(uint32) ptr , PERM_PRESENT);
+							}
+						}
+					}
+					return (void *)ptr;
+				}
 			}
-		}
-		else
-		{
-			uint32 number_of_page_to_be_allocated = (uint32)ROUNDUP(size , PAGE_SIZE)/PAGE_SIZE;
 		}
 	}
 	return NULL;
