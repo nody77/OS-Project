@@ -339,7 +339,7 @@ void* sys_hardlimit(struct Env* e)
 	//Comment the following line before start coding...
 	//panic("not implemented yet");
 	// system call MS2
-	return (void *)syscall(SYS_to_get_hardlimit, e->hardLimit, 0, 0, 0, 0);
+	return (void *)syscall(SYS_to_get_hardlimit, (uint32) e->hardLimit,0, 0, 0, 0);
 }
 
 void* sys_sbrk(int increment)
