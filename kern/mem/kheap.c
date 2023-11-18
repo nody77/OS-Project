@@ -169,6 +169,7 @@ void* kmalloc(unsigned int size)
 					if(size % PAGE_SIZE == 0)
 					{
 						unsigned int number_of_frames = size / PAGE_SIZE;
+						uint32 va = (uint32)ptr;
 						for(unsigned int i=0;i<number_of_frames ;i+=1)
 						{
 							//void * new_page_table = create_page_table(ptr_page_directory,(uint32)ptr);
@@ -176,8 +177,9 @@ void* kmalloc(unsigned int size)
 							int return_allocation = allocate_frame(&frame);
 							if(return_allocation == 0)
 							{
-								// not sure about permisions
-								int return_mapping = map_frame(ptr_page_directory,frame , (uint32)ptr , PERM_PRESENT);
+								// not sure about permissions
+								int return_mapping = map_frame(ptr_page_directory,frame , va , PERM_PRESENT);
+								va = va + PAGE_SIZE;
 							}
 						}
 
@@ -185,14 +187,16 @@ void* kmalloc(unsigned int size)
 					else
 					{
 						unsigned int number_of_frames = (unsigned int)(ROUNDUP((uint32)size , (uint32)PAGE_SIZE));
+						uint32 va = (uint32)ptr;
 						for(unsigned int i =0 ; i<number_of_frames;i+=1)
 						{
 							struct FrameInfo * frame;
 							int return_allocation = allocate_frame(&frame);
 							if(return_allocation == 0)
 							{
-								// not sure about permisions
-								int return_mapping = map_frame(ptr_page_directory,frame , (uint32)ptr , PERM_PRESENT);
+								// not sure about permissions
+								int return_mapping = map_frame(ptr_page_directory,frame , va , PERM_PRESENT);
+								va = va + PAGE_SIZE;
 							}
 						}
 					}
@@ -208,6 +212,7 @@ void* kmalloc(unsigned int size)
 					if(size % PAGE_SIZE == 0)
 					{
 						unsigned int number_of_frames = size / PAGE_SIZE;
+						uint32 va = (uint32)ptr;
 						for(unsigned int i=0;i<number_of_frames ;i+=1)
 						{
 							//void * new_page_table = create_page_table(ptr_page_directory,(uint32)ptr);
@@ -216,7 +221,8 @@ void* kmalloc(unsigned int size)
 							if(return_allocation == 0)
 							{
 								// not sure about permisions
-								int return_mapping = map_frame(ptr_page_directory,frame , (uint32)ptr , PERM_PRESENT);
+								int return_mapping = map_frame(ptr_page_directory,frame , va , PERM_PRESENT);
+								va = va + PAGE_SIZE;
 							}
 						}
 
@@ -224,6 +230,7 @@ void* kmalloc(unsigned int size)
 					else
 					{
 						unsigned int number_of_frames = (unsigned int)ROUNDUP((uint32)size , (uint32)PAGE_SIZE);
+						uint32 va = (uint32)ptr;
 						for(unsigned int i =0 ; i<number_of_frames;i+=1)
 						{
 							struct FrameInfo * frame;
@@ -231,7 +238,8 @@ void* kmalloc(unsigned int size)
 							if(return_allocation == 0)
 							{
 								// not sure about permisions
-								int return_mapping = map_frame(ptr_page_directory,frame ,(uint32) ptr , PERM_PRESENT);
+								int return_mapping = map_frame(ptr_page_directory,frame ,va , PERM_PRESENT);
+								va = va + PAGE_SIZE;
 							}
 						}
 					}
