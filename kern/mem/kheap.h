@@ -7,7 +7,7 @@
 
 #include <inc/types.h>
 
-LIST_HEAD(Page_Allocator_Block, Block);
+LLIST_HEAD(Page_Allocator_Block, Block);
 struct Page_Allocator_Block block_list;
 
 struct Block
