@@ -73,6 +73,13 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 
 	}
 	initialize_dynamic_allocator(daStart,initSizeToAllocate);
+	//=========================FOR KMALLOC=============================//
+	LIST_INIT(&block_list);
+	struct Block * first_block = (struct Block *)(HardLimit + PAGE_SIZE);
+	first_block->size = (unsigned int)(KERNEL_HEAP_MAX - ((unsigned int)HardLimit + PAGE_SIZE));
+	first_block->free = 0;
+	LIST_INSERT_HEAD(&block_list , first_block);
+	//======================================================//
 	return 0;
 }
 
