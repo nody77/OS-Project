@@ -6,6 +6,7 @@
 #endif
 
 #include <inc/types.h>
+#include <inc/queue.h>
 
 LLIST_HEAD(Page_Allocator_Block, Block);
 struct Page_Allocator_Block block_list;
