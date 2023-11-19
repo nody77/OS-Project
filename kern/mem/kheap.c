@@ -84,16 +84,25 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 }
 
 
+
 void* sbrk(int increment)
 {
-	
 	//TODO: [PROJECT'23.MS2 - #02] [1] KERNEL HEAP - sbrk()
+
 	if(increment > 0){
-		int num_of_kilos = ROUNDUP(increment , 4); // size is the rounded up value of the increment
-		int size = num_of_kilos * (PAGE_SIZE/4);
+
+		int num_of_kilos;
+		if(increment % PAGE_SIZE != 0){
+			num_of_kilos = ROUNDUP(increment , PAGE_SIZE); // size is the rounded up value of the increment
+		}
+		else{
+			num_of_kilos = increment;
+		}
+		int num_of_iterations = num_of_kilos / PAGE_SIZE;
+		//int size = num_of_kilos * (PAGE_SIZE/4);
 		uint32 * returnedBreak = SegmentBreak;
-		for(int i = 0; i < increment ; i++ ){
-			
+		for(int i = 0; i < num_of_iterations ; i++ ){
+
 			//struct FrameInfo *frame_to_be_allocated = get_frame_info(ptr_page_directory , SegmentBreak, )
 			if(SegmentBreak >= HardLimit){
 				panic("Invalid Access !!");
@@ -102,20 +111,22 @@ void* sbrk(int increment)
 				struct FrameInfo * frame_to_be_allocated ;
 				int returned_frame = allocate_frame(&frame_to_be_allocated);
 				if(returned_frame != 0){
-					
+
 					panic("Memory is full !!");
 				}
 				else{
-					int perm = (~PERM_AVAILABLE) & (~PERM_BUFFERED) & (~PERM_MODIFIED) & PERM_PRESENT & PERM_USED & (~ PERM_USER) & PERM_WRITEABLE;
+					int perm = (~PERM_AVAILABLE) | (~PERM_BUFFERED) | (~PERM_MODIFIED) | PERM_PRESENT | PERM_USED | (~ PERM_USER) | PERM_WRITEABLE;
 					map_frame(ptr_page_directory , frame_to_be_allocated, (uint32) SegmentBreak, perm);
-					SegmentBreak = SegmentBreak + size;
-					return (void *)returnedBreak;
+					SegmentBreak = SegmentBreak + PAGE_SIZE;
+
 				}
 			}
 		}
+		return (void *)returnedBreak;
 	}
 	else if (increment < 0){
-
+		
+		
 	}
 	else {
 		return (void *) SegmentBreak;
@@ -136,8 +147,8 @@ void* sbrk(int increment)
 	 */
 
 	//MS2: COMMENT THIS LINE BEFORE START CODING====
-	return (void*)-1 ;
-	panic("not implemented yet");
+	//return (void*)-1 ;
+	//panic("not implemented yet");
 }
 
 
