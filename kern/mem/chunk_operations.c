@@ -127,7 +127,6 @@ void allocate_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 	// Write your code here, remove the panic and write your code
 	//panic("allocate_user_mem() is not implemented yet...!!");
 	//check if there is a page_table or not
-	//check if there is a page_table or not
 	uint32 *ptrTOPageTable=NULL;
 	int tableFoundCheck =get_page_table(ptr_page_directory,virtual_address,&(ptrTOPageTable));
 	if(tableFoundCheck==TABLE_NOT_EXIST){	// if not -> create new page table
@@ -136,7 +135,6 @@ void allocate_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 	//Mark the given range to indicate it’s reserved for the page allocator of this environment
 	if(size <= PAGE_SIZE){
 	// PERM_AVAILABLE --> Available for software use
-	// PERM_USER
 	ptrTOPageTable [PTX(virtual_address)]=ptrTOPageTable[PTX(virtual_address)] | (PERM_AVAILABLE);
 	//pt_set_page_permissions(e->env_page_directory, virtual_address, PERM_AVAILABLE,0);
 	}
