@@ -136,7 +136,8 @@ void *alloc_block_FF(uint32 size)
 			element->is_free =0;
 			found_block = 1;
 			element->size  = required_size_to_be_allocated;
-			return element+1;
+			void * returned_va = (void *)element + sizeOfMetaData();
+			return returned_va;
 		}
 		else if (element->is_free == 1 && (element->size) > required_size_to_be_allocated)
 		{
@@ -158,14 +159,15 @@ void *alloc_block_FF(uint32 size)
 	}
 	if (found_block == 0)
 	{
-		int is_extended = (int)sbrk(size);
-		if (is_extended == -1)
+		void * is_extended = (void *)sbrk(size);
+		if (is_extended == (void *)-1)
 		{
 			return NULL;
 		}
 		else
 		{
-			element->is_free =0;
+			element = LIST_LAST(&metaData);
+			element->is_free = 0;
 			void * address = (void *)element +required_size_to_be_allocated;
 			uint32 remaining_size = (element->size) - required_size_to_be_allocated;
 			if(remaining_size >= sizeOfMetaData())
