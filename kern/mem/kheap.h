@@ -13,8 +13,8 @@
 struct Block
 {
 	uint8 is_free;
+	uint32 size;
 	uint32 virtual_address;
-	struct FrameInfo * frame;
 };
 
 
