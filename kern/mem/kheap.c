@@ -50,7 +50,6 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 }
 
 
-
 void* sbrk(int increment)
 {
 	//TODO: [PROJECT'23.MS2 - #02] [1] KERNEL HEAP - sbrk()
@@ -81,7 +80,7 @@ void* sbrk(int increment)
 					panic("Memory is full !!");
 				}
 				else{
-					int perm = PERM_PRESENT | PERM_USED | PERM_WRITEABLE;
+					int perm = PERM_WRITEABLE;
 					map_frame(ptr_page_directory , frame_to_be_allocated, (uint32) SegmentBreak, perm);
 					SegmentBreak = SegmentBreak + PAGE_SIZE;
 
@@ -91,13 +90,12 @@ void* sbrk(int increment)
 		return (void *)returnedBreak;
 	}
 	else if (increment < 0){
-		
-		
+
+
 	}
-	else {
-		return (void *) SegmentBreak;
-	}
-	/* increment > 0: move the segment break of the kernel to increase the size of its heap,
+	return (void *) SegmentBreak;
+
+	 /*increment > 0: move the segment break of the kernel to increase the size of its heap,
 	 * 				you should allocate pages and map them into the kernel virtual address space as necessary,
 	 * 				and returns the address of the previous break (i.e. the beginning of newly mapped memory).
 	 * increment = 0: just return the current position of the segment break
@@ -111,13 +109,10 @@ void* sbrk(int increment)
 	 * 	3) Allocating additional pages for a kernel dynamic allocator will fail if the free frames are exhausted
 	 * 		or the break exceed the limit of the dynamic allocator. If sbrk fails, kernel should panic(...)
 	 */
-
 	//MS2: COMMENT THIS LINE BEFORE START CODING====
 	//return (void*)-1 ;
-	//panic("not implemented yet");
+	//panic("not implemented yet");
 }
-
-
 void initialize_page_list()
 {
 	for(int i = 0; i<KHEAP_PAGE_ALLOCATOR_SIZE ;i+=1)
@@ -134,9 +129,7 @@ void* kmalloc(unsigned int size)
 
 	//change this "return" according to your answer
 	//kpanic_into_prompt("kmalloc() is not implemented yet...!!");
-	//cprintf("entered kmalloc\n");
-	//cprintf("the size of page allocator = %d\n",KHEAP_PAGE_ALLOCATOR_SIZE);
-	if (size < DYN_ALLOC_MAX_BLOCK_SIZE)
+	if (size <= DYN_ALLOC_MAX_BLOCK_SIZE)
 	{
 		void * va = alloc_block_FF(size);
 		return va;
@@ -178,11 +171,17 @@ void* kmalloc(unsigned int size)
 						{
 							return NULL;
 						}
-						Page_Allocation_list[i].frame  = frame_to_be_allocated;
+						if(i == start_index)
+						{
+							Page_Allocation_list[i].size = size;
+						}
+						else
+						{
+							Page_Allocation_list[i].size = 0;
+						}
 						Page_Allocation_list[i].is_free =0;
 						Page_Allocation_list[i].virtual_address = va;
 						va += PAGE_SIZE;
-						//cprintf("The va after the loop = %x\n",va);
 					}
 					else
 					{
@@ -201,29 +200,41 @@ void* kmalloc(unsigned int size)
 
 void kfree(void* virtual_address)
 {
-	uint32 *vir_address =  (uint32 *)virtual_address;
-	uint32 va = (uint32)virtual_address;
-	uint32 HARD_LIMIT = (uint32)HardLimit;
+
 	//TODO: [PROJECT'23.MS2 - #04] [1] KERNEL HEAP - kfree()
 	//refer to the project presentation and documentation for details
 	// Write your code here, remove the panic and write your code
-	if(va >= KERNEL_HEAP_START && va < HARD_LIMIT)
+	//panic("kfree() is not implemented yet...!!");
+	if(virtual_address >= (void *)Start && virtual_address <= (void *)SegmentBreak)
 	{
 		free_block(virtual_address);
 	}
-	else if(va >= HARD_LIMIT + PAGE_SIZE && va < KERNEL_HEAP_MAX)
+	else if(virtual_address >= (void *)((void *)HardLimit + PAGE_SIZE) && virtual_address < (void *)KERNEL_HEAP_MAX)
 	{
-		//just brainstorming..
-		unmap_frame(ptr_page_directory, va);
-		uint32 *ptr_page_table;
-		struct FrameInfo * frame = get_frame_info(ptr_page_directory,va,&ptr_page_table);
-		free_frame(frame);
+		uint32 index = 0;
+		for(index = 0 ; index < KHEAP_PAGE_ALLOCATOR_SIZE ; index+=1)
+		{
+			if(Page_Allocation_list[index].virtual_address == (uint32)virtual_address)
+			{
+				break;
+			}
+		}
+		uint32 number_of_allocated_frames = ROUNDUP( Page_Allocation_list[index].size, PAGE_SIZE) / PAGE_SIZE;
+		uint32 end_index = number_of_allocated_frames + index;
+		for(int i = index; i < end_index; i+=1)
+		{
+			uint32 * ptr_page_table;
+			struct FrameInfo * frame_to_be_deleted = get_frame_info(ptr_page_directory , Page_Allocation_list[i].virtual_address,&ptr_page_table);
+			unmap_frame(ptr_page_directory , Page_Allocation_list[i].virtual_address);
+			Page_Allocation_list[i].is_free = 1;
+			Page_Allocation_list[i].size = 0;
+			Page_Allocation_list[i].virtual_address = 0;
+		}
 	}
 	else
 	{
-		panic("invalid address");
+		panic("Invalid Address\n");
 	}
-	//panic("kfree() is not implemented yet...!!");
 }
 
 unsigned int kheap_virtual_address(unsigned int physical_address)
@@ -247,7 +258,7 @@ unsigned int kheap_physical_address(unsigned int virtual_address)
 	//refer to the project presentation and documentation for details
 	// Write your code here, remove the panic and write your code
 	//panic("kheap_physical_address() is not implemented yet...!!");
-	if(virtual_address >=KERNEL_HEAP_START && virtual_address <=KERNEL_HEAP_MAX)
+	if(virtual_address >=((unsigned int)HardLimit + PAGE_SIZE) && virtual_address <= KERNEL_HEAP_MAX)
 	{
 		uint32 *ptr_page_table;
 		struct FrameInfo * frame = get_frame_info(ptr_page_directory,virtual_address,&ptr_page_table);
@@ -257,6 +268,7 @@ unsigned int kheap_physical_address(unsigned int virtual_address)
 	//change this "return" according to your answer
 	return 0;
 }
+
 
 
 void kfreeall()
@@ -296,5 +308,5 @@ void *krealloc(void *virtual_address, uint32 new_size)
 	//TODO: [PROJECT'23.MS2 - BONUS#1] [1] KERNEL HEAP - krealloc()
 	// Write your code here, remove the panic and write your code
 	return NULL;
-	panic("krealloc() is not implemented yet...!!");
+	panic("krealloc() is not implemented yet...!!");
 }
