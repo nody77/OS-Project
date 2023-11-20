@@ -546,15 +546,15 @@ void* sys_sbrk(int increment)
 	{
 		uint32* oldSegmentBreak = env->segmentBreak;
 		env->segmentBreak = env->segmentBreak + increment ;
-		if(env->segmentBreak%PAGE_SIZE != 0)
+		if((uint32)env->segmentBreak%PAGE_SIZE != 0)
 		{
 			uint32 * tmp = ROUNDUP(env->segmentBreak,PAGE_SIZE);
 			oldSegmentBreak = ROUNDUP(oldSegmentBreak,PAGE_SIZE);
 			uint32 numOfPages = (uint32)(oldSegmentBreak-tmp)/PAGE_SIZE;
 			for(int i= 0;i<numOfPages;i++)
 			{
-				env_page_ws_invalidate(env, tmp);
-				pf_remove_env_page(env, tmp);
+				env_page_ws_invalidate(env, (uint32)tmp);
+				pf_remove_env_page(env, (uint32)tmp);
 				tmp+=PAGE_SIZE;
 
 			}
