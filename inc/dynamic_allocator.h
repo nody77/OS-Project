@@ -4,6 +4,9 @@
 #include <inc/types.h>
 #include <inc/environment_definitions.h>
 
+
+
+
 /*Data*/
 /*Max Size for the Dynamic Allocator*/
 #define DYN_ALLOC_MAX_SIZE (32<<20) //32MB
@@ -19,6 +22,7 @@ enum
 };
 
 LIST_HEAD(MemBlock_LIST, BlockMetaData);
+struct MemBlock_LIST metaData;
 
 struct BlockMetaData
 {
@@ -29,7 +33,6 @@ struct BlockMetaData
 
 #define sizeOfMetaData() (sizeof(struct BlockMetaData))
 
-struct MemBlock_LIST metaData;
 
 /*Functions*/
 
@@ -44,6 +47,7 @@ uint32 get_block_size(void* va);
 int8 is_free_block(void* va);
 void print_blocks_list(struct MemBlock_LIST list);
 //===================================================================
+
 
 //Required Functions
 //In KernelHeap: should be implemented inside kern/mem/kheap.c
