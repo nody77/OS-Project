@@ -115,7 +115,7 @@ void* sbrk(int increment)
 					panic("Memory is full !!");
 				}
 				else{
-					int perm = (~PERM_AVAILABLE) | (~PERM_BUFFERED) | (~PERM_MODIFIED) | PERM_PRESENT | PERM_USED | (~ PERM_USER) | PERM_WRITEABLE;
+					int perm = PERM_PRESENT | PERM_USED | PERM_WRITEABLE;
 					map_frame(ptr_page_directory , frame_to_be_allocated, (uint32) SegmentBreak, perm);
 					SegmentBreak = SegmentBreak + PAGE_SIZE;
 
@@ -152,6 +152,14 @@ void* sbrk(int increment)
 }
 
 
+void initialize_page_list()
+{
+	for(int i = 0; i<KHEAP_PAGE_ALLOCATOR_SIZE ;i+=1)
+	{
+		Page_Allocation_list[i].is_free = 1 ;
+	}
+
+}
 void* kmalloc(unsigned int size)
 {
 	//TODO: [PROJECT'23.MS2 - #03] [1] KERNEL HEAP - kmalloc()
@@ -160,6 +168,8 @@ void* kmalloc(unsigned int size)
 
 	//change this "return" according to your answer
 	//kpanic_into_prompt("kmalloc() is not implemented yet...!!");
+	//cprintf("entered kmalloc\n");
+	//cprintf("the size of page allocator = %d\n",KHEAP_PAGE_ALLOCATOR_SIZE);
 	if (size < DYN_ALLOC_MAX_BLOCK_SIZE)
 	{
 		void * va = alloc_block_FF(size);
@@ -167,100 +177,61 @@ void* kmalloc(unsigned int size)
 	}
 	else
 	{
-		if((int)isKHeapPlacementStrategyFIRSTFIT == 1)
+		if(isKHeapPlacementStrategyFIRSTFIT() == 1)
 		{
-
-			struct Block * ptr;
-			LIST_FOREACH(ptr,&block_list)
+			int index , counter = 0 , flag_frames_found = 0;
+			uint32 number_of_allocated_frames = ROUNDUP(size , PAGE_SIZE) / PAGE_SIZE;
+			for(index = 0 ; index < KHEAP_PAGE_ALLOCATOR_SIZE ; index+=1)
 			{
-				if(ptr->size == size && ptr->free == 1)
+				if(counter == number_of_allocated_frames)
 				{
-					ptr->size = size;
-					ptr->free = 0;
-					if(size % PAGE_SIZE == 0)
-					{
-						unsigned int number_of_frames = size / PAGE_SIZE;
-						uint32 va = (uint32)ptr;
-						for(unsigned int i=0;i<number_of_frames ;i+=1)
-						{
-							//void * new_page_table = create_page_table(ptr_page_directory,(uint32)ptr);
-							struct FrameInfo * frame;
-							int return_allocation = allocate_frame(&frame);
-							if(return_allocation == 0)
-							{
-								// not sure about permissions
-								int return_mapping = map_frame(ptr_page_directory,frame , va , PERM_PRESENT);
-								va = va + PAGE_SIZE;
-							}
-						}
-
-					}
-					else
-					{
-						unsigned int number_of_frames = (unsigned int)(ROUNDUP((uint32)size , (uint32)PAGE_SIZE));
-						uint32 va = (uint32)ptr;
-						for(unsigned int i =0 ; i<number_of_frames;i+=1)
-						{
-							struct FrameInfo * frame;
-							int return_allocation = allocate_frame(&frame);
-							if(return_allocation == 0)
-							{
-								// not sure about permissions
-								int return_mapping = map_frame(ptr_page_directory,frame , va , PERM_PRESENT);
-								va = va + PAGE_SIZE;
-							}
-						}
-					}
-					return (void *)ptr;
+					flag_frames_found = 1;
+					break;
 				}
-				else if (ptr->size > size && ptr->free == 1)
+				if(Page_Allocation_list[index].is_free == 0)
 				{
-					struct Block * newblock = (struct Block *)(size);
-					newblock->size = ptr->size - size;
-					newblock->free = 1;
-					ptr->size = size;
-					ptr->free = 0;
-					if(size % PAGE_SIZE == 0)
-					{
-						unsigned int number_of_frames = size / PAGE_SIZE;
-						uint32 va = (uint32)ptr;
-						for(unsigned int i=0;i<number_of_frames ;i+=1)
-						{
-							//void * new_page_table = create_page_table(ptr_page_directory,(uint32)ptr);
-							struct FrameInfo * frame;
-							int return_allocation = allocate_frame(&frame);
-							if(return_allocation == 0)
-							{
-								// not sure about permisions
-								int return_mapping = map_frame(ptr_page_directory,frame , va , PERM_PRESENT);
-								va = va + PAGE_SIZE;
-							}
-						}
-
-					}
-					else
-					{
-						unsigned int number_of_frames = (unsigned int)ROUNDUP((uint32)size , (uint32)PAGE_SIZE);
-						uint32 va = (uint32)ptr;
-						for(unsigned int i =0 ; i<number_of_frames;i+=1)
-						{
-							struct FrameInfo * frame;
-							int return_allocation = allocate_frame(&frame);
-							if(return_allocation == 0)
-							{
-								// not sure about permisions
-								int return_mapping = map_frame(ptr_page_directory,frame ,va , PERM_PRESENT);
-								va = va + PAGE_SIZE;
-							}
-						}
-					}
-					return (void *)ptr;
+					counter = 0;
+				}
+				else
+				{
+					counter+=1;
 				}
 			}
+			if(flag_frames_found == 1)
+			{
+				int start_index = index - number_of_allocated_frames;
+				uint32 va = (uint32)HardLimit + PAGE_SIZE + (PAGE_SIZE * start_index);
+				struct FrameInfo * frame_to_be_allocated;
+				for(int i = start_index ; i < (index); i += 1)
+				{
+					int return_allocated_frame = allocate_frame(&frame_to_be_allocated);
+					if(return_allocated_frame == 0)
+					{
+						int return_mapped_frame  = map_frame(ptr_page_directory , frame_to_be_allocated , va , PERM_WRITEABLE);
+						if(return_mapped_frame != 0)
+						{
+							return NULL;
+						}
+						Page_Allocation_list[i].frame  = frame_to_be_allocated;
+						Page_Allocation_list[i].is_free =0;
+						Page_Allocation_list[i].virtual_address = va;
+						va += PAGE_SIZE;
+						//cprintf("The va after the loop = %x\n",va);
+					}
+					else
+					{
+						return NULL;
+					}
+
+				}
+				return (void *)((uint32)HardLimit + PAGE_SIZE + (PAGE_SIZE * start_index));
+			}
+
 		}
 	}
 	return NULL;
 }
+
 
 void kfree(void* virtual_address)
 {
