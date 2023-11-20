@@ -505,24 +505,23 @@ void* sys_sbrk(int increment)
 	 * 		You might have to undo any operations you have done so far in this case.
 	 */
 
-	/*fe el increment +ve ha3mel mark 3la el goz2 elly zad , fe el increment -ve bashof el frames
-	elly etshalet mawgooda fe el working set aw el disk w ashelhom */
+
 	struct Env* env = curenv; //the current running Environment to adjust its break limit
 	if (increment > 0)
 	{
 		uint32* oldBreak = env->segmentBreak;
 		uint32 * newBreak = increment + env->segmentBreak;
+		if(((uint32)newBreak)%PAGE_SIZE != 0 )
+		{
+			newBreak = ROUNDUP(newBreak,PAGE_SIZE);
+		}
 		if(newBreak <= env->hardLimit)
 		{
-			if(((uint32)newBreak)%PAGE_SIZE != 0 )
-			{
-				newBreak = ROUNDUP(newBreak,PAGE_SIZE);
-			}
 			env->segmentBreak = newBreak;
+			return oldBreak;
 
 		}
 
-		return oldBreak;
 		//		uint32 requiredSize;
 		//		if(increment%PAGE_SIZE == 0)
 		//		{
@@ -545,7 +544,22 @@ void* sys_sbrk(int increment)
 	}
 	else if(increment<0)
 	{
-		env->segmentBreak = env->segmentBreak - increment ;
+		uint32* oldSegmentBreak = env->segmentBreak;
+		env->segmentBreak = env->segmentBreak + increment ;
+		if(env->segmentBreak%PAGE_SIZE != 0)
+		{
+			uint32 * tmp = ROUNDUP(env->segmentBreak,PAGE_SIZE);
+			oldSegmentBreak = ROUNDUP(oldSegmentBreak,PAGE_SIZE);
+			uint32 numOfPages = (uint32)(oldSegmentBreak-tmp)/PAGE_SIZE;
+			for(int i= 0;i<numOfPages;i++)
+			{
+				env_page_ws_invalidate(env, tmp);
+				pf_remove_env_page(env, tmp);
+				tmp+=PAGE_SIZE;
+
+			}
+
+		}
 		return env->segmentBreak;
 	}
 
