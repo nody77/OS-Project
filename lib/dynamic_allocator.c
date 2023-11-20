@@ -98,14 +98,12 @@ void initialize_dynamic_allocator(uint32 daStart, uint32 initSizeOfAllocatedSpac
 
 	//TODO: [PROJECT'23.MS1 - #5] [3] DYNAMIC ALLOCATOR - initialize_dynamic_allocator()
 	//panic("initialize_dynamic_allocator is not implemented yet");
-	if(  daStart >=  KERNEL_HEAP_START &&  daStart <= KERNEL_HEAP_MAX)
-	{
-		struct BlockMetaData *meta = ((struct BlockMetaData *) daStart) ;
-		meta->is_free = 1;
-		meta->size = initSizeOfAllocatedSpace;
-		LIST_INSERT_HEAD(&metaData, meta);
-	}
+	struct BlockMetaData *meta = (struct BlockMetaData *) daStart;
+	meta->is_free = 1;
+	meta->size = initSizeOfAllocatedSpace;
+	LIST_INSERT_HEAD(&metaData, meta);
 }
+//}
 
 //=========================================
 // [4] ALLOCATE BLOCK BY FIRST FIT:
@@ -159,15 +157,17 @@ void *alloc_block_FF(uint32 size)
 	}
 	if (found_block == 0)
 	{
-		void * is_extended = (void *)sbrk(size);
+		void * is_extended = (void *)sbrk(required_size_to_be_allocated);
 		if (is_extended == (void *)-1)
 		{
 			return NULL;
 		}
 		else
 		{
+			uint32 new_size = (uint32)(ROUNDUP(required_size_to_be_allocated , PAGE_SIZE));
 			element = LIST_LAST(&metaData);
 			element->is_free = 0;
+			element->size += new_size;
 			void * address = (void *)element +required_size_to_be_allocated;
 			uint32 remaining_size = (element->size) - required_size_to_be_allocated;
 			if(remaining_size >= sizeOfMetaData())
@@ -219,7 +219,6 @@ void *alloc_block_BF(uint32 size)
 			 var = (element->size - required_size_to_be_allocated );
 			 if(var < min)
 			 {
-				 cprintf("var=%d\n",var);
 				 min = var;
 				 NeedSbrk = 0;
 			 }
@@ -241,14 +240,11 @@ void *alloc_block_BF(uint32 size)
 			{
 				element->is_free = 0;
 				void * address = (void *)element + required_size_to_be_allocated;
-				cprintf("the address is %x\n",address);
 				struct BlockMetaData * newMetadata = (struct BlockMetaData *)address;
-				cprintf("the address is %x\n",address);
 				newMetadata->is_free = 1;
 				newMetadata->size = min;
 				LIST_INSERT_AFTER(&metaData,element,newMetadata);
 				element->size = required_size_to_be_allocated;
-				cprintf("The address of the block found  = %x\n" , element);
 				void * returned_va = (void *)element + sizeOfMetaData();
 				return returned_va;
 			}
@@ -256,17 +252,14 @@ void *alloc_block_BF(uint32 size)
 
 	}
 
-
     if (NeedSbrk == 1)
 	{
-
-				int is_extended = (int)sbrk(size);
-				if (is_extended == -1)
-				{
-					return NULL;
-				}
+		int is_extended = (int)sbrk(size);
+		if (is_extended == -1)
+		{
+			return NULL;
+		}
 	}
-
 	return NULL;
 }
 
@@ -386,20 +379,17 @@ void *realloc_block_FF(void* va, uint32 new_size)
 	if ( va == NULL &&  new_size== 0)
 	{
 		//TEST 1 DONE
-		cprintf("The virtual address is NULL and size = 0 \n");
 		return NULL;
 	}
 	else if(va == NULL && new_size > 0)
 	{
 		//TEST 2 DONE
-		cprintf("The virtual address is NULL and size > 0\n");
 		return alloc_block_FF(new_size);
 
 	}
 	else if (va != NULL && new_size == 0)
 	{
 		//TEST 2 DONE
-		cprintf("The new size = 0 only\n");
 		free_block(va);
 		return NULL;
 	}
@@ -407,14 +397,12 @@ void *realloc_block_FF(void* va, uint32 new_size)
 	else if (ptr_to_be_changed->size == size)
 	{
 		// TEST 3.2 DONE
-		cprintf("Nothing will happen , size  is not change\n");
 		return va;
 	}
 	else if (ptr_to_be_changed->size > size && ptr_to_be_changed_after->is_free == 0)
 	{
 		//SIZE DEC , SPLITE , NEXT IS NOT FREE DONE
 		// TEST 4.1
-		cprintf("SIZE DEC , SPLITE , NEXT IS NOT FREE\n");
 		void * address = ptr_void + size;
 		uint32 remaining_size = ptr_to_be_changed->size -size;
 		if (remaining_size >= sizeOfMetaData())
@@ -431,7 +419,6 @@ void *realloc_block_FF(void* va, uint32 new_size)
 	{
 		//SIZED DEC , SPLIT , MERGE WITH THE NEXT DONE
 		//TEST 4.2
-		cprintf("SIZED DEC , SPLIT , MERGE WITH THE NEXT\n");
 		void * address = ptr_void + size;
 		struct BlockMetaData * new_metadata = (struct BlockMetaData * ) address;
 		new_metadata->is_free=1;
@@ -446,7 +433,6 @@ void *realloc_block_FF(void* va, uint32 new_size)
 	else if ((ptr_to_be_changed->size + ptr_to_be_changed_after->size) >= size && ptr_to_be_changed_after->is_free==1)
 	{
 		// SIZE INC , AVAILABLE , SPLITE OR TAKE THEM ALL DONE
-		cprintf("SIZE INC , NEXT IS AVAILABLE , SPLITE\n");
 		void * address = ptr_void + size;
 		uint32 remaining_size = (ptr_to_be_changed->size + ptr_to_be_changed_after->size) - size;
 		if(remaining_size >= sizeOfMetaData())
@@ -473,7 +459,6 @@ void *realloc_block_FF(void* va, uint32 new_size)
 	{
 		// SIZE INC , NEXT AVAILABLE , BUT SIZE DOESNT FIT DONE
 		// TEST 3.3
-		cprintf("SIZE INC , NEXT AVAILABLE , BUT SIZE DOESNT FIT\n");
 		free_block(va);
 		void * returned_ptr = alloc_block_FF(new_size);
 		return returned_ptr;
@@ -482,10 +467,10 @@ void *realloc_block_FF(void* va, uint32 new_size)
 	{
 		// SIZE INC , NEXT NOT AVAILABLE DONE
 		// TEST 3.4
-		cprintf("SIZE INC , NEXT NOT AVAILABLE\n");
 		free_block(va);
 		void * returned_ptr = alloc_block_FF(new_size);
 		return returned_ptr;
 	}
 	return NULL;
 }
+
