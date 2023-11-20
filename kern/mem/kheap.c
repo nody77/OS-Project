@@ -18,38 +18,16 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 	//Comment the following line(s) before start coding...
 	//panic("not implemented yet");
 
-
-	int initial_size_exceed_the_given_limit = 0;//Boolean to check if no memory
-
-
-	cprintf("daStart = %x\n",daStart);
-	cprintf("====================================\n");
-	cprintf("initSizeToAllocate =%d\n",initSizeToAllocate);
-	cprintf("====================================\n");
-	cprintf("daLimit =%x\n",daLimit);
-	cprintf("====================================\n");
-
 	Start=(uint32*)daStart;
 	SegmentBreak=(uint32*) (daStart + initSizeToAllocate) ;
 	HardLimit=(uint32*)daLimit;
 
-	cprintf("Start = %x\n",Start);
-	cprintf("====================================\n");
-	cprintf("SegmentBreak =%x\n",SegmentBreak);
-	cprintf("====================================\n");
-	cprintf("HardLimit =%x\n",HardLimit);
-	cprintf("====================================\n");
-
 	if(SegmentBreak > HardLimit)
-		{
-		  return E_NO_MEM;
-		}
+	{
+		return E_NO_MEM;
+	}
 	int noOfPages = ROUNDUP(initSizeToAllocate,PAGE_SIZE) / PAGE_SIZE;
-	cprintf("noOfPages = %d\n",noOfPages);
-	cprintf("====================================\n");
-	
 	uint32 va =daStart ;
-
 	for(int i = 0 ; i <noOfPages ; i++)
 	{
 		//1)allocate
@@ -57,29 +35,17 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 		int ret = allocate_frame(&ptr);
 		if (ret != E_NO_MEM )
 		{
-			//uint32 pa = to_physical_address(ptr);
-
 			//2)map
 			map_frame(ptr_page_directory,ptr,va,PERM_WRITEABLE);//wrong permission for now
 			va = va + PAGE_SIZE;
-
 		}
 		else
 		{
 			return E_NO_MEM;
 		}
-
-
-
 	}
 	initialize_dynamic_allocator(daStart,initSizeToAllocate);
-	//=========================FOR KMALLOC=============================//
-	LIST_INIT(&block_list);
-	struct Block * first_block = (struct Block *)(HardLimit + PAGE_SIZE);
-	first_block->size = (unsigned int)(KERNEL_HEAP_MAX - ((unsigned int)HardLimit + PAGE_SIZE));
-	first_block->free = 0;
-	LIST_INSERT_HEAD(&block_list , first_block);
-	//======================================================//
+	initialize_page_list();
 	return 0;
 }
 
