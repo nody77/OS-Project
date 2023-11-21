@@ -519,9 +519,8 @@ void* sys_sbrk(int increment)
 		{
 			env->segmentBreak = newBreak;
 			uint32 *ptrToUserPageTable=NULL;
-			//do I create the page table before rounding up the oldBreak or after ?
-			ptrToUserPageTable = create_page_table(env->env_page_directory,(uint32)oldBreak);
 			uint32 newVirtualAddress=ROUNDUP((uint32)oldBreak,PAGE_SIZE);
+			ptrToUserPageTable = create_page_table(env->env_page_directory,newVirtualAddress);
 			uint32 numOfPages=((uint32)newBreak-newVirtualAddress)/PAGE_SIZE;
 			for(uint32 i=0;i<numOfPages;i++)
 			{
