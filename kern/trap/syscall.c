@@ -518,8 +518,17 @@ void* sys_sbrk(int increment)
 		if(newBreak <= env->hardLimit)
 		{
 			env->segmentBreak = newBreak;
+			uint32 *ptrToUserPageTable=NULL;
+			//do I create the page table before rounding up the oldBreak or after ?
+			ptrToUserPageTable = create_page_table(env->env_page_directory,(uint32)oldBreak);
+			uint32 newVirtualAddress=ROUNDUP((uint32)oldBreak,PAGE_SIZE);
+			uint32 numOfPages=((uint32)newBreak-newVirtualAddress)/PAGE_SIZE;
+			for(uint32 i=0;i<numOfPages;i++)
+			{
+				ptrToUserPageTable [PTX(newVirtualAddress)]=ptrToUserPageTable[PTX(newVirtualAddress)] | (PERM_AVAILABLE);
+				newVirtualAddress=newVirtualAddress+PAGE_SIZE;
+			}
 			return oldBreak;
-
 		}
 
 		//		uint32 requiredSize;
@@ -546,20 +555,25 @@ void* sys_sbrk(int increment)
 	{
 		uint32* oldSegmentBreak = env->segmentBreak;
 		env->segmentBreak = env->segmentBreak + increment ;
+		uint32 * tmp;
 		if((uint32)env->segmentBreak%PAGE_SIZE != 0)
 		{
-			uint32 * tmp = ROUNDUP(env->segmentBreak,PAGE_SIZE);
-			oldSegmentBreak = ROUNDUP(oldSegmentBreak,PAGE_SIZE);
-			uint32 numOfPages = (uint32)(oldSegmentBreak-tmp)/PAGE_SIZE;
-			for(int i= 0;i<numOfPages;i++)
-			{
-				env_page_ws_invalidate(env, (uint32)tmp);
-				pf_remove_env_page(env, (uint32)tmp);
-				tmp+=PAGE_SIZE;
-
-			}
+			tmp = ROUNDUP(env->segmentBreak,PAGE_SIZE);
+		}
+		else
+		{
+			tmp = env->segmentBreak;
+		}
+		oldSegmentBreak = ROUNDUP(oldSegmentBreak,PAGE_SIZE);
+		uint32 numOfPages = (uint32)(oldSegmentBreak-tmp)/PAGE_SIZE;
+		for(int i= 0;i<numOfPages;i++)
+		{
+			env_page_ws_invalidate(env, (uint32)tmp);
+			pf_remove_env_page(env, (uint32)tmp);
+			tmp+=PAGE_SIZE;
 
 		}
+
 		return env->segmentBreak;
 	}
 
