@@ -20,18 +20,15 @@ inline struct WorkingSetElement* env_page_ws_list_create_element(struct Env* e, 
 	// Write your code here, remove the panic and write your code
 	//panic("env_page_ws_list_create_element() is not implemented yet...!!");
 	//return NULL;
-	if(virtual_address==0){
-		panic("fail to create new element\n");
+	// Create a new object of struct WorkingSetElement
+	//Initialize it by the given virtual address
+	struct WorkingSetElement* newWSElement = kmalloc(sizeof(struct WorkingSetElement));
+	if (newWSElement == NULL) {
+		panic("Failed to create new element\n");
 		return NULL;
-	}else{
-		// Create a new object of struct WorkingSetElement
-		//Initialize it by the given virtual address
-		struct WorkingSetElement* newElement=NULL;
-		newElement->virtual_address=virtual_address;
-//		newElement->prev_next_info.le_next=NULL;
-//		newElement->prev_next_info.le_prev=NULL;
-		return newElement;
 	}
+	newWSElement->virtual_address = virtual_address;
+	return newWSElement;
 }
 inline void env_page_ws_invalidate(struct Env* e, uint32 virtual_address)
 {
