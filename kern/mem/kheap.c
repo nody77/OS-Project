@@ -310,24 +310,22 @@ unsigned int kheap_physical_address(unsigned int virtual_address)
 	//panic("kheap_physical_address() is not implemented yet...!!");
 	if(virtual_address >=((unsigned int)HardLimit + PAGE_SIZE) && virtual_address <= KERNEL_HEAP_MAX)
 	{
-		uint32 offset;
+		uint32 offset = (uint32)(virtual_address & 0x00000FFF);
 		uint32 *ptr_page_table;
-		struct FrameInfo * frame = get_frame_info(ptr_page_directory,virtual_address,&ptr_page_table);
-		uint32 physical_address = to_physical_address(frame);
-		uint32 is_frame_present = ptr_page_table[PTX(virtual_address)] & PERM_PRESENT;
-		return (unsigned int)(physical_address + offset);
+		get_page_table(ptr_page_directory, virtual_address, &ptr_page_table);
+		uint32 start_of_frame = ptr_page_table[PTX(virtual_address)] & 0xFFFFF000 ;
+		return (unsigned int)(start_of_frame + offset);
 	}
 	else if(virtual_address >= (unsigned int)Start && virtual_address <= (unsigned int)SegmentBreak)
 	{
-		uint32 offset;
+		uint32 offset = (uint32)(virtual_address & 0x00000FFF);
 		uint32 *ptr_page_table;
-		struct FrameInfo * frame = get_frame_info(ptr_page_directory,virtual_address,&ptr_page_table);
-		uint32 physical_address = to_physical_address(frame);
-		uint32 is_frame_present = ptr_page_table[PTX(virtual_address)] & PERM_PRESENT;
-		return (unsigned int)(physical_address + offset);
+		get_page_table(ptr_page_directory, virtual_address, &ptr_page_table);
+		uint32 start_of_frame = ptr_page_table[PTX(virtual_address)] & 0xFFFFF000 ;
+		return (unsigned int)(start_of_frame + offset);
 	}
 	//change this "return" according to your answer
-	return 0;
+	return 0;
 }
 
 
