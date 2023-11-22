@@ -158,15 +158,33 @@ void free_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 	/*==========================================================================*/
 	//TODO: [PROJECT'23.MS2 - #12] [2] USER HEAP - free_user_mem() [Kernel Side]
 	/*REMOVE THESE LINES BEFORE START CODING */
-	inctst();
-	return;
+//	inctst();
+//	return;
 	/*==========================================================================*/
 
 	// Write your code here, remove the panic and write your code
-	panic("free_user_mem() is not implemented yet...!!");
+	//panic("free_user_mem() is not implemented yet...!!");
 
 	//TODO: [PROJECT'23.MS2 - BONUS#2] [2] USER HEAP - free_user_mem() IN O(1): removing page from WS List instead of searching the entire list
+	if(size <= PAGE_SIZE)
+	{
+		pt_set_page_permissions(e->env_page_directory, virtual_address ,0, PERM_AVAILABLE);
+		pf_remove_env_page(e,virtual_address);
+		env_page_ws_invalidate( e,virtual_address);
+	}
+	else
+	{
+		uint32 newVirtualAddress=virtual_address;
+		uint32 numOfPages=size/PAGE_SIZE;
+		for(uint32 i=0;i<numOfPages;i++)
+		{
+			pt_set_page_permissions(e->env_page_directory, newVirtualAddress ,0, PERM_AVAILABLE);
+			pf_remove_env_page(e,newVirtualAddress);
+			env_page_ws_invalidate( e,newVirtualAddress);
+			newVirtualAddress=newVirtualAddress+PAGE_SIZE;
+		}
 
+	}
 }
 
 //=====================================
