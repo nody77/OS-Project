@@ -36,7 +36,8 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 		if (ret != E_NO_MEM )
 		{
 			//2)map
-			map_frame(ptr_page_directory,ptr,va,PERM_WRITEABLE);//wrong permission for now
+			map_frame(ptr_page_directory,ptr,va,PERM_WRITEABLE);
+			ptr->va = va;
 			va = va + PAGE_SIZE;
 		}
 		else
@@ -64,7 +65,6 @@ void* sbrk(int increment)
 			num_of_kilos = increment;
 		}
 		int num_of_iterations = num_of_kilos / PAGE_SIZE;
-		//int size = num_of_kilos * (PAGE_SIZE/4);
 		uint32 * returnedBreak = SegmentBreak;
 		for(int i = 0; i < num_of_iterations ; i++ ){
 
@@ -82,6 +82,7 @@ void* sbrk(int increment)
 				else{
 					int perm = PERM_WRITEABLE;
 					map_frame(ptr_page_directory , frame_to_be_allocated, (uint32) SegmentBreak, perm);
+					frame_to_be_allocated->va = (uint32)SegmentBreak;
 					SegmentBreak = SegmentBreak + PAGE_SIZE;
 
 				}
@@ -181,6 +182,7 @@ void* kmalloc(unsigned int size)
 						}
 						Page_Allocation_list[i].is_free =0;
 						Page_Allocation_list[i].virtual_address = va;
+						frame_to_be_allocated->va = va;
 						va += PAGE_SIZE;
 					}
 					else
@@ -229,6 +231,7 @@ void kfree(void* virtual_address)
 			Page_Allocation_list[i].is_free = 1;
 			Page_Allocation_list[i].size = 0;
 			Page_Allocation_list[i].virtual_address = 0;
+			frame_to_be_deleted->va = 0;
 		}
 	}
 	else
@@ -245,12 +248,59 @@ unsigned int kheap_virtual_address(unsigned int physical_address)
 	//panic("kheap_virtual_address() is not implemented yet...!!");
 	//EFFICIENT IMPLEMENTATION ~O(1) IS REQUIRED ==================
 	//change this "return" according to your answer
+	//cprintf("PA :%x\n", physical_address);
 	struct FrameInfo* frame = to_frame_info(physical_address);
-	if (frame->references > 0)
-	{
-		return (unsigned int)frame->va;
+
+	if(frame->va >= (uint32)HardLimit + PAGE_SIZE && frame->va < KERNEL_HEAP_MAX){
+		uint32 page_table_index = PTX(frame->va);
+		uint32 offset = page_table_index & 0x00000FFF;
+		uint32 returned_address = frame->va + offset;
+		return (unsigned int)frame->va + offset;
 	}
-	return 0;
+	else if(frame->va >= (uint32)Start && frame->va < (uint32)SegmentBreak){
+
+		//uint32 page_table_index = PTX(frame->va);
+		//uint32* ptr_page_table;
+		//uint32 offset;
+		//get_page_table(ptr_page_directory, frame->va, &ptr_page_table);
+		//uint32 start_of_frame = ptr_page_table[PTX(frame->va)] & 0xFFFFF000 ;
+		//offset = frame->va & 0x00000FFF;
+		//uint32 page_table_index = PTX(frame->va);
+		//uint32 offset = physical_address & 0x00000FFF;
+		//uint32 offset = PGOFF(physical_address);
+		//uint32 returned_address = start_of_frame + offset;
+		//uint32 page_table_index = PTX(frame->va);
+		//uint32* ptr_page_table;
+		//uint32 offset;
+		//int returned_page_table = get_page_table(ptr_page_directory, frame->va, &ptr_page_table);
+		//offset = frame->va & 0x00000FFF;
+		//cprintf("PA :%x\n", physical_address);
+		//cprintf("Current sbrk :%x\n", sbrk(0));
+		//uint32 page_number = frame->va / PAGE_SIZE;
+		//cprintf("page number = %x\n", page_number);
+		//uint32 offset = frame->va % PAGE_SIZE;
+		//uint32 page_table_index = PTX(frame->va);
+		//cprintf("page_table_index = %x\n", page_table_index);
+
+		//cprintf("offset = %x\n", offset);
+		//uint32 returned_address = frame->va + offset;
+		//cprintf("returned_address = %x\n", returned_address);
+
+		//cprintf("offset = %x\n", offset)
+		//uint32 frame_number = physical_address / PAGE_SIZE;
+		uint32 virtual_address = (to_frame_number(frame)<< 12) | (physical_address % PAGE_SIZE);
+		uint32 offset = physical_address % PAGE_SIZE;
+		//cprintf("offset = %x\n", offset);
+		//uint32 returned_address = frame->va + offset;
+		//cprintf("returned_address = %x\n", returned_address);
+		//frame->va + offset
+		//physical_address - offset F6000
+		//uint32 virtual_address = (page_number + offset) ;
+		return (unsigned int) virtual_address << 12;
+		//return (unsigned int)returned_address;
+
+	}
+	return 0;
 }
 unsigned int kheap_physical_address(unsigned int virtual_address)
 {
@@ -260,10 +310,21 @@ unsigned int kheap_physical_address(unsigned int virtual_address)
 	//panic("kheap_physical_address() is not implemented yet...!!");
 	if(virtual_address >=((unsigned int)HardLimit + PAGE_SIZE) && virtual_address <= KERNEL_HEAP_MAX)
 	{
+		uint32 offset;
 		uint32 *ptr_page_table;
 		struct FrameInfo * frame = get_frame_info(ptr_page_directory,virtual_address,&ptr_page_table);
 		uint32 physical_address = to_physical_address(frame);
-		return (unsigned int)physical_address;
+		uint32 is_frame_present = ptr_page_table[PTX(virtual_address)] & PERM_PRESENT;
+		return (unsigned int)(physical_address + offset);
+	}
+	else if(virtual_address >= (unsigned int)Start && virtual_address <= (unsigned int)SegmentBreak)
+	{
+		uint32 offset;
+		uint32 *ptr_page_table;
+		struct FrameInfo * frame = get_frame_info(ptr_page_directory,virtual_address,&ptr_page_table);
+		uint32 physical_address = to_physical_address(frame);
+		uint32 is_frame_present = ptr_page_table[PTX(virtual_address)] & PERM_PRESENT;
+		return (unsigned int)(physical_address + offset);
 	}
 	//change this "return" according to your answer
 	return 0;
