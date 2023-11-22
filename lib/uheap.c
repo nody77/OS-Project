@@ -1,5 +1,5 @@
 #include <inc/lib.h>
-
+#include<lib/syscall.c>
 //==================================================================================//
 //============================== GIVEN FUNCTIONS ===================================//
 //==================================================================================//
@@ -30,6 +30,14 @@ void* sbrk(int increment)
 	return (void*) sys_sbrk(increment);
 }
 
+void initialize_user_page_list()
+{
+	for(int i = 0; i<UHEAP_PAGE_ALLOCATOR_SIZE ;i+=1)
+	{
+		user_Page_Allocation_list[i].is_free=1;
+	}
+
+}
 //=================================
 // [2] ALLOCATE SPACE IN USER HEAP:
 //=================================
@@ -42,22 +50,111 @@ void* malloc(uint32 size)
 	//==============================================================
 	//TODO: [PROJECT'23.MS2 - #09] [2] USER HEAP - malloc() [User Side]
 	// Write your code here, remove the panic and write your code
-	panic("malloc() is not implemented yet...!!");
+	//panic("malloc() is not implemented yet...!!");
+	if (size <= DYN_ALLOC_MAX_BLOCK_SIZE)
+	{
+			void * va = alloc_block_FF(size);
+			return va;
+	}
+	else
+	{
+		uint32 * HardLimit = (uint32*)sys_hardlimit();
+		if(sys_isUHeapPlacementStrategyFIRSTFIT() == 1) //sys_isUHeapPlacementStrategyBESTFIT()
+			{
+					int index , counter = 0 , flag_frames_found = 0;
+					uint32 number_of_allocated_frames = ROUNDUP(size , PAGE_SIZE) / PAGE_SIZE;
+					for(index = 0 ; index < UHEAP_PAGE_ALLOCATOR_SIZE ; index+=1)
+					{
+						if(counter == number_of_allocated_frames)
+						{
+							flag_frames_found = 1;
+							break;
+						}
+						if(user_Page_Allocation_list[index].is_free == 0)
+						{
+							counter = 0;
+						}
+						else
+						{
+							counter+=1;
+						}
+					}
+					if(flag_frames_found == 1)
+					{
+						int start_index = index - number_of_allocated_frames;
+						uint32 va = (uint32)HardLimit + PAGE_SIZE + (PAGE_SIZE * start_index);
+						uint32 startVa = va;
+						for(int i = start_index ; i < (index); i += 1)
+						{
+							if(i == start_index)
+							{
+								user_Page_Allocation_list[i].size = size;
+							}
+							else
+							{
+								user_Page_Allocation_list[i].size = 0;
+							}
+
+							    user_Page_Allocation_list[i].is_free =0;
+							    user_Page_Allocation_list[i].virtual_address = va;
+								va += PAGE_SIZE;
+						}
+						sys_allocate_user_mem(startVa,size);
+						return (void *)((uint32)HardLimit + PAGE_SIZE + (PAGE_SIZE * start_index));
+
+					}
+			}
+	}
+
 	return NULL;
 	//Use sys_isUHeapPlacementStrategyFIRSTFIT() and	sys_isUHeapPlacementStrategyBESTFIT()
 	//to check the current strategy
 
 }
 
+
 //=================================
 // [3] FREE SPACE FROM USER HEAP:
 //=================================
 void free(void* virtual_address)
 {
-	//TODO: [PROJECT'23.MS2 - #11] [2] USER HEAP - free() [User Side]
-	// Write your code here, remove the panic and write your code
-	panic("free() is not implemented yet...!!");
+	void * SegmentBrk = sys_sbrk(0);
+	//uint32 * HardLimit = (uint32*)sys_hardlimit();
+	void * HardLimit =sys_hardlimit();
+	if(virtual_address>= (void*) USER_HEAP_START && virtual_address < SegmentBrk)
+	{
+		free_block(virtual_address);
+	}
+	else if (virtual_address >=  (HardLimit+PAGE_SIZE) && virtual_address <(void*) USER_HEAP_MAX)
+	{
+		uint32 size;
+		uint32 index = 0;
+		for(index = 0 ; index < UHEAP_PAGE_ALLOCATOR_SIZE ; index+=1)
+				{
+					if(user_Page_Allocation_list[index].virtual_address == (uint32)virtual_address)
+					{
+						size = user_Page_Allocation_list[index].size;
+						break;
+					}
+				}
+
+				uint32 number_of_allocated_frames = ROUNDUP( user_Page_Allocation_list[index].size, PAGE_SIZE) / PAGE_SIZE;
+				uint32 end_index = number_of_allocated_frames + index;
+				for(int i = index; i < end_index; i+=1)
+				{
+					user_Page_Allocation_list[i].is_free = 1;
+					user_Page_Allocation_list[i].size = 0;
+					user_Page_Allocation_list[i].virtual_address = 0;
+				}
+				sys_free_user_mem((uint32)virtual_address,size);
+
+	}
+	else
+	{
+		panic("invalid address\n");
+	}
 }
+
 
 
 //=================================
