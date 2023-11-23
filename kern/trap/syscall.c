@@ -510,7 +510,7 @@ void* sys_sbrk(int increment)
 	if (increment > 0)
 	{
 		uint32* oldBreak = env->segmentBreak;
-		uint32 * newBreak = increment + env->segmentBreak;
+		uint32 * newBreak = (uint32 *)((void *)env->segmentBreak+increment);
 		if(((uint32)newBreak)%PAGE_SIZE != 0 )
 		{
 			newBreak = ROUNDUP(newBreak,PAGE_SIZE);
@@ -553,27 +553,29 @@ void* sys_sbrk(int increment)
 	else if(increment<0)
 	{
 		uint32* oldSegmentBreak = env->segmentBreak;
-		env->segmentBreak = env->segmentBreak + increment ;
-		uint32 * tmp;
-		if((uint32)env->segmentBreak%PAGE_SIZE != 0)
+		env->segmentBreak = (uint32 *)((void *)env->segmentBreak + increment) ;
+		if(env->segmentBreak >= env->start)
 		{
-			tmp = ROUNDUP(env->segmentBreak,PAGE_SIZE);
+			uint32 * tmp;
+			if((uint32)env->segmentBreak%PAGE_SIZE != 0)
+			{
+				tmp = ROUNDUP(env->segmentBreak,PAGE_SIZE);
+			}
+			else
+			{
+				tmp = env->segmentBreak;
+			}
+			oldSegmentBreak = ROUNDUP(oldSegmentBreak,PAGE_SIZE);
+			uint32 numOfPages = (uint32)(oldSegmentBreak-tmp)/PAGE_SIZE;
+			for(int i= 0;i<numOfPages;i++)
+			{
+				env_page_ws_invalidate(env, (uint32)tmp);
+				pf_remove_env_page(env, (uint32)tmp);
+				tmp = (uint32 *)((void *)tmp +PAGE_SIZE);
+			}
+			return env->segmentBreak;
 		}
-		else
-		{
-			tmp = env->segmentBreak;
-		}
-		oldSegmentBreak = ROUNDUP(oldSegmentBreak,PAGE_SIZE);
-		uint32 numOfPages = (uint32)(oldSegmentBreak-tmp)/PAGE_SIZE;
-		for(int i= 0;i<numOfPages;i++)
-		{
-			env_page_ws_invalidate(env, (uint32)tmp);
-			pf_remove_env_page(env, (uint32)tmp);
-			tmp+=PAGE_SIZE;
 
-		}
-
-		return env->segmentBreak;
 	}
 
 	return (void *)-1 ;
