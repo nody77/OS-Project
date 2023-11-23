@@ -580,12 +580,12 @@ void* sys_sbrk(int increment)
 
 }
 
-void* sys_hardlimit(uint32 hardlimit)
+void* sys_hardlimit()
 {
 	//Comment the following line before start coding...
 	//panic("not implemented yet");
 	// system call MS2
-	return (void *)hardlimit;
+	return (void *)curenv->hardLimit;
 }
 
 /**************************************************************************/
