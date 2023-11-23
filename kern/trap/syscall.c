@@ -606,7 +606,7 @@ uint32 syscall(uint32 syscallno, uint32 a1, uint32 a2, uint32 a3, uint32 a4, uin
 		break;
 	// system call for MS2
 	case SYS_to_get_hardlimit:
-		return (uint32)sys_hardlimit(a1);
+		return (uint32)sys_hardlimit();
 		break;
 	case SYS_free_user_mem:
 		if(address != NULL && (a1 < USER_LIMIT - PAGE_SIZE && a1 > 0))
