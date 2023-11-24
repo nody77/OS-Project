@@ -337,6 +337,95 @@ void *krealloc(void *virtual_address, uint32 new_size)
 {
 	//TODO: [PROJECT'23.MS2 - BONUS#1] [1] KERNEL HEAP - krealloc()
 	// Write your code here, remove the panic and write your code
+	//return NULL;
+	//panic("krealloc() is not implemented yet...!!");
+	if(virtual_address >= (void *) Start && virtual_address < (void *) SegmentBreak && new_size <= DYN_ALLOC_MAX_BLOCK_SIZE)
+	{
+		void * new_address = realloc_block_FF(virtual_address , new_size);
+		return new_address;
+	}
+	else if (virtual_address >= (void *)((void *)HardLimit + PAGE_SIZE) && virtual_address < (void *)KERNEL_HEAP_MAX && new_size <= DYN_ALLOC_MAX_BLOCK_SIZE)
+	{
+		kfree(virtual_address);
+		void * new_address = alloc_block_FF(new_size);
+		return new_address;
+	}
+	else if (virtual_address >= (void *) Start && virtual_address < (void *) SegmentBreak && new_size > DYN_ALLOC_MAX_BLOCK_SIZE)
+	{
+		free_block(virtual_address);
+		void * new_address = kmalloc(new_size);
+		return new_address;
+	}
+	else if (new_size == 0)
+	{
+		kfree(virtual_address);
+		return NULL;
+	}
+	else if (virtual_address == NULL)
+	{
+		void * new_address = kmalloc(new_size);
+		return new_address;
+	}
+	else if (virtual_address >= (void *)((void *)HardLimit + PAGE_SIZE) && virtual_address < (void *)KERNEL_HEAP_MAX && new_size > DYN_ALLOC_MAX_BLOCK_SIZE)
+	{
+		uint32 index =0;
+		for(index = 0 ; index < KHEAP_PAGE_ALLOCATOR_SIZE; index +=1)
+		{
+			 if((void *)Page_Allocation_list[index].virtual_address == virtual_address)
+			 {
+				 break;
+			 }
+		}
+		if(new_size > Page_Allocation_list[index].size)
+		{
+			uint32 number_of_allocated_frames = ROUNDUP( Page_Allocation_list[index].size, PAGE_SIZE) / PAGE_SIZE;
+			uint32 number_of_new_allocated_frames = ROUNDUP( new_size, PAGE_SIZE) / PAGE_SIZE;
+			if(number_of_allocated_frames == number_of_new_allocated_frames)
+			{
+				Page_Allocation_list[index].size = new_size;
+				return (void *)Page_Allocation_list[index].virtual_address;
+			}
+			else
+			{
+				kfree(virtual_address);
+				void * new_address = kmalloc(new_size);
+				return new_address;
+			}
+		}
+		else if (new_size < Page_Allocation_list[index].size)
+		{
+			uint32 number_of_allocated_frames = ROUNDUP( Page_Allocation_list[index].size, PAGE_SIZE) / PAGE_SIZE;
+			uint32 number_of_new_allocated_frames = ROUNDUP( new_size, PAGE_SIZE) / PAGE_SIZE;
+			if(number_of_allocated_frames == number_of_new_allocated_frames)
+			{
+				Page_Allocation_list[index].size = new_size;
+				return (void *)Page_Allocation_list[index].virtual_address;
+			}
+			else
+			{
+				uint32 number_of_pages_to_be_freed = number_of_allocated_frames - number_of_new_allocated_frames;
+				for(int i = 0 ; i<number_of_pages_to_be_freed;i+=1)
+				{
+					index += 1;
+				}
+				for(int i = index ; i<number_of_allocated_frames; i+=1)
+				{
+					uint32 * ptr_page_table;
+					struct FrameInfo * frame_to_be_deleted = get_frame_info(ptr_page_directory , Page_Allocation_list[i].virtual_address,&ptr_page_table);
+					unmap_frame(ptr_page_directory , Page_Allocation_list[i].virtual_address);
+					ptr_page_table[PTX(Page_Allocation_list[i].virtual_address)] = ptr_page_table[PTX(Page_Allocation_list[i].virtual_address)] & (~PERM_PRESENT);
+					Page_Allocation_list[i].is_free = 1;
+					Page_Allocation_list[i].size = 0;
+					frame_to_be_deleted->va = 0;
+					Page_Allocation_list[i].virtual_address = 0;
+				}
+				return (void *)Page_Allocation_list[index].virtual_address;
+			}
+		}
+		else
+		{
+			return (void *)Page_Allocation_list[index].virtual_address;
+		}
+	}
 	return NULL;
-	panic("krealloc() is not implemented yet...!!");
 }
