@@ -520,7 +520,11 @@ void* sys_sbrk(int increment)
 			env->segmentBreak = newBreak;
 			uint32 *ptrToUserPageTable=NULL;
 			uint32 newVirtualAddress=ROUNDUP((uint32)oldBreak,PAGE_SIZE);
-			ptrToUserPageTable = create_page_table(env->env_page_directory,newVirtualAddress);
+			int tableFoundCheck =get_page_table(ptr_page_directory,newVirtualAddress,&(ptrToUserPageTable));
+			if(tableFoundCheck==TABLE_NOT_EXIST)
+			{
+				ptrToUserPageTable = create_page_table(env->env_page_directory,newVirtualAddress);
+		    }
 			uint32 numOfPages=((uint32)newBreak-newVirtualAddress)/PAGE_SIZE;
 			for(uint32 i=0;i<numOfPages;i++)
 			{
@@ -529,7 +533,6 @@ void* sys_sbrk(int increment)
 			}
 			return oldBreak;
 		}
-
 		//		uint32 requiredSize;
 		//		if(increment%PAGE_SIZE == 0)
 		//		{
@@ -567,9 +570,16 @@ void* sys_sbrk(int increment)
 			}
 			oldSegmentBreak = ROUNDUP(oldSegmentBreak,PAGE_SIZE);
 			uint32 numOfPages = (uint32)(oldSegmentBreak-tmp)/PAGE_SIZE;
+			uint32 *ptrToUserPageTable=NULL;
+			int tableFoundCheck =get_page_table(ptr_page_directory,(uint32)tmp,&(ptrToUserPageTable));
+
 			for(int i= 0;i<numOfPages;i++)
 			{
+				//unmark (not sure)
+				ptrToUserPageTable [PTX((uint32)tmp)]=ptrToUserPageTable[PTX((uint32)tmp)] & ~(PERM_AVAILABLE);
+				// remove from working set if found
 				env_page_ws_invalidate(env, (uint32)tmp);
+				// remove from page file
 				pf_remove_env_page(env, (uint32)tmp);
 				tmp = (uint32 *)((void *)tmp +PAGE_SIZE);
 			}
