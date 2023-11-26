@@ -177,6 +177,7 @@ void* kmalloc(unsigned int size)
 						{
 							return NULL;
 						}
+						cprintf("allocated & mapped at va %x\n", va);
 						if(i == start_index)
 						{
 							Page_Allocation_list[i].size = size;
@@ -196,6 +197,7 @@ void* kmalloc(unsigned int size)
 					}
 
 				}
+				cprintf("kmalloc of size %d is allocated at address %x\n", size, ((uint32)HardLimit + PAGE_SIZE + (PAGE_SIZE * start_index)));
 				return (void *)((uint32)HardLimit + PAGE_SIZE + (PAGE_SIZE * start_index));
 			}
 
@@ -258,7 +260,7 @@ unsigned int kheap_virtual_address(unsigned int physical_address)
 	if(frame->va >= (uint32)HardLimit + PAGE_SIZE && frame->va < KERNEL_HEAP_MAX)
 	{
 		uint32 page_table_index = PTX(frame->va);
-		uint32 offset = page_table_index & 0x00000FFF;
+		uint32 offset = physical_address & 0x00000FFF;
 		uint32 returned_address = frame->va + offset;
 		return (unsigned int)returned_address;
 	}
@@ -408,7 +410,7 @@ void *krealloc(void *virtual_address, uint32 new_size)
 				{
 					index += 1;
 				}
-				for(int i = index ; i<number_of_allocated_frames; i+=1)
+				for(int i = index ; i<number_of_allocated_frames+index; i+=1)
 				{
 					uint32 * ptr_page_table;
 					struct FrameInfo * frame_to_be_deleted = get_frame_info(ptr_page_directory , Page_Allocation_list[i].virtual_address,&ptr_page_table);
