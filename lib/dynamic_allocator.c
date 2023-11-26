@@ -110,6 +110,7 @@ void initialize_dynamic_allocator(uint32 daStart, uint32 initSizeOfAllocatedSpac
 //=========================================
 void *alloc_block_FF(uint32 size)
 {
+
 	//TODO: [PROJECT'23.MS1 - #6] [3] DYNAMIC ALLOCATOR - alloc_block_FF()
 	//panic("alloc_block_FF is not implemented yet");
 	if(size == 0)
@@ -124,6 +125,7 @@ void *alloc_block_FF(uint32 size)
 		uint32 da_break = (uint32)sbrk(0);
 		initialize_dynamic_allocator(da_start, da_break - da_start);
 	}
+
 	uint32 required_size_to_be_allocated = size + sizeOfMetaData();
 	int found_block = 0;
 	struct BlockMetaData * element;
@@ -134,14 +136,14 @@ void *alloc_block_FF(uint32 size)
 			element->is_free =0;
 			found_block = 1;
 			element->size  = required_size_to_be_allocated;
-			void * returned_va = (void *)element + sizeOfMetaData();
+			void * returned_va = (void *)(element + 1);
 			return returned_va;
 		}
 		else if (element->is_free == 1 && (element->size) > required_size_to_be_allocated)
 		{
 			element->is_free =0;
 			found_block = 1;
-			void * address = (void *)element +required_size_to_be_allocated;
+			struct BlockMetaData * address = (struct BlockMetaData *)((uint32)element + required_size_to_be_allocated);
 			uint32 remaining_size = (element->size) - required_size_to_be_allocated;
 			if(remaining_size >= sizeOfMetaData())
 			{
@@ -151,8 +153,8 @@ void *alloc_block_FF(uint32 size)
 				LIST_INSERT_AFTER(&metaData,element,newMetadata);
 				element->size = required_size_to_be_allocated;
 			}
-			void * returned_va = (void *)element + sizeOfMetaData();
-			return returned_va;
+			uint32 * returned_va = (uint32 *)(element + 1);
+			return (void *)returned_va;
 		}
 	}
 	if (found_block == 0)
@@ -164,11 +166,12 @@ void *alloc_block_FF(uint32 size)
 		}
 		else
 		{
+			// New element to put at the end of the list instead of LIST_LAST
 			uint32 new_size = (uint32)(ROUNDUP(required_size_to_be_allocated , PAGE_SIZE));
 			element = LIST_LAST(&metaData);
 			element->is_free = 0;
 			element->size += new_size;
-			void * address = (void *)element +required_size_to_be_allocated;
+			struct BlockMetaData * address = (struct BlockMetaData *)((uint32)element + required_size_to_be_allocated);
 			uint32 remaining_size = (element->size) - required_size_to_be_allocated;
 			if(remaining_size >= sizeOfMetaData())
 			{
