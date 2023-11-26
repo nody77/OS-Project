@@ -93,30 +93,32 @@ void page_fault_handler(struct Env * curenv, uint32 fault_va)
 		int return_frame_allocation = allocate_frame(&frame_to_be_allocated);
 		if (return_frame_allocation == 0)
 		{
-			int return_map_allcoation = map_frame(ptr_page_directory ,frame_to_be_allocated, fault_va,(PERM_PRESENT|PERM_USED));
+			int return_map_allcoation = map_frame(curenv->env_page_directory ,frame_to_be_allocated, fault_va,(PERM_PRESENT|PERM_USER|PERM_WRITEABLE));
 			if (return_map_allcoation == 0 )
 			{
 				int return_read_pageFile = pf_read_env_page(curenv , (void *)fault_va);
 				if(return_read_pageFile == E_PAGE_NOT_EXIST_IN_PF)
 				{
 					// check if the page file is illegal access
-					if((uint32 *)fault_va < curenv->start || (uint32 *)fault_va > curenv->hardLimit)
+					//if((uint32 *)fault_va < curenv->start || (uint32 *)fault_va > curenv->hardLimit)
+					if((fault_va >= USER_HEAP_START && fault_va <= USER_HEAP_MAX)||(fault_va <=USTACKTOP && fault_va>= USTACKBOTTOM))
+					{
+
+						struct WorkingSetElement * wseToBeAdded = env_page_ws_list_create_element(curenv,fault_va);
+						if (curenv->page_last_WS_element == NULL)
+						{
+							//update the working set list to add the new frame
+							LIST_INSERT_TAIL(&(curenv->page_WS_list) , wseToBeAdded);
+							curenv->page_last_WS_element = wseToBeAdded;
+							curenv->page_last_WS_index+=1;
+						}
+
+					}
+					else
 					{
 						sched_kill_env(curenv->env_id);
 					}
 				}
-				//update the page file to the new allocated mapped frame even if it did not exit for stack or heap
-				int return_update_pageFile = pf_update_env_page(curenv , fault_va , frame_to_be_allocated);
-				if (return_update_pageFile == 0)
-				{
-					struct WorkingSetElement * wseToBeAdded = env_page_ws_list_create_element(curenv,fault_va);
-					if (curenv->page_last_WS_element == NULL)
-					{
-						//update the working set list to add the new frame
-						LIST_INSERT_TAIL(&(curenv->page_WS_list) , wseToBeAdded);
-					}
-				}
-
 			}
 		}
 		//refer to the project presentation and documentation for details
