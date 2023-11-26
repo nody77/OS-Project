@@ -528,7 +528,8 @@ void* sys_sbrk(int increment)
 			uint32 numOfPages=((uint32)newBreak-newVirtualAddress)/PAGE_SIZE;
 			for(uint32 i=0;i<numOfPages;i++)
 			{
-				ptrToUserPageTable [PTX(newVirtualAddress)]=ptrToUserPageTable[PTX(newVirtualAddress)] | (PERM_AVAILABLE);
+				pt_set_page_permissions(env->env_page_directory, newVirtualAddress, PERM_AVAILABLE,0);
+				//ptrToUserPageTable [PTX(newVirtualAddress)]=ptrToUserPageTable[PTX(newVirtualAddress)] | (PERM_AVAILABLE);
 				newVirtualAddress=newVirtualAddress+PAGE_SIZE;
 			}
 			return oldBreak;
@@ -575,8 +576,9 @@ void* sys_sbrk(int increment)
 
 			for(int i= 0;i<numOfPages;i++)
 			{
-				//unmark (not sure)
-				ptrToUserPageTable [PTX((uint32)tmp)]=ptrToUserPageTable[PTX((uint32)tmp)] & ~(PERM_AVAILABLE);
+				//unmark 
+				pt_set_page_permissions(env->env_page_directory, (uint32)tmp,0,PERM_AVAILABLE);
+				//ptrToUserPageTable [PTX((uint32)tmp)]=ptrToUserPageTable[PTX((uint32)tmp)] & ~(PERM_AVAILABLE);
 				// remove from working set if found
 				env_page_ws_invalidate(env, (uint32)tmp);
 				// remove from page file
