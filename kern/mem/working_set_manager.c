@@ -13,22 +13,21 @@
 ///============================================================================================
 /// Dealing with environment working set
 #if USE_KHEAP
-// NOT DONE YET 
 inline struct WorkingSetElement* env_page_ws_list_create_element(struct Env* e, uint32 virtual_address)
 {
 	//TODO: [PROJECT'23.MS2 - #14] [3] PAGE FAULT HANDLER - Create a new working set element
-	// Write your code here, remove the panic and write your code
+	//Write your code here, remove the panic and write your code
 	//panic("env_page_ws_list_create_element() is not implemented yet...!!");
 	//return NULL;
-	// Create a new object of struct WorkingSetElement
+	//Create a new object of struct WorkingSetElement
 	//Initialize it by the given virtual address
-	struct WorkingSetElement* newWSElement = kmalloc(sizeof(struct WorkingSetElement));
-	if (newWSElement == NULL) {
-		panic("Failed to create new element\n");
-		return NULL;
-	}
-	newWSElement->virtual_address = virtual_address;
-	return newWSElement;
+	struct WorkingSetElement * new_wse = NULL;
+	new_wse = (struct WorkingSetElement *)kmalloc(sizeof(struct WorkingSetElement));
+	if(new_wse== NULL)
+		panic("Can no create a new working set\n");
+	new_wse->virtual_address = virtual_address;
+	new_wse->empty = 0;
+	return new_wse;
 }
 inline void env_page_ws_invalidate(struct Env* e, uint32 virtual_address)
 {
