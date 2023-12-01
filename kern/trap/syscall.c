@@ -601,7 +601,14 @@ void* sys_hardlimit()
 	// system call MS2
 	return (void *)curenv->hardLimit;
 }
-
+void sys_env_set_nice(uint32 nice)
+{
+	//Comment the following line before start coding...
+	//panic("not implemented yet");
+	// system call MS3
+	env_set_nice(curenv,nice);
+	return;
+}
 /**************************************************************************/
 /************************* SYSTEM CALLS HANDLER ***************************/
 /**************************************************************************/
@@ -644,6 +651,10 @@ uint32 syscall(uint32 syscallno, uint32 a1, uint32 a2, uint32 a3, uint32 a4, uin
 			sched_kill_env(curenv->env_id);
 		}
 		return 0;
+		break;
+	case SYS_env_set_nice:
+		sys_env_set_nice(a1);
+		return 0;
 		break;
 	//=====================================================================
 	case SYS_cputs:
