@@ -58,6 +58,8 @@ enum
 	SYS_allocate_user_mem,
         // new system call for ms2
 	SYS_to_get_hardlimit,
+	// new system call for ms3
+	SYS_env_set_nice,
 	//=====================================================================
 	NSYSCALLS
 };
