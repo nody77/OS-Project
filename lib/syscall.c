@@ -365,4 +365,8 @@ void sys_allocate_user_mem(uint32 virtual_address, uint32 size)
 	syscall(SYS_allocate_user_mem, virtual_address, size, 0, 0, 0);
 		return ;
 }
-
+// new system call for ms3
+void sys_env_set_nice(uint32 nice){
+	syscall(SYS_env_set_nice, nice, 0, 0, 0, 0);
+	return ;
+}
