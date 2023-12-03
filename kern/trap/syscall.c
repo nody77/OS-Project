@@ -601,7 +601,7 @@ void* sys_hardlimit()
 	// system call MS2
 	return (void *)curenv->hardLimit;
 }
-void sys_env_set_nice(uint32 nice)
+void sys_env_set_nice(int nice)
 {
 	//Comment the following line before start coding...
 	//panic("not implemented yet");
