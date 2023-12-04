@@ -186,8 +186,70 @@ void page_fault_handler(struct Env * curenv, uint32 fault_va)
 				//refer to the project presentation and documentation for details
 			}
 			else{
-			panic("page_fault_handler() FIFO Replacement is not implemented yet...!!");
+			//TODO: [PROJECT'23.MS3 - #1] [1] PAGE FAULT HANDLER - FIFO Replacement
+			// Write your code here, remove the panic and write your code
+			//panic("page_fault_handler() FIFO Replacement is not implemented yet...!!");
+			//cprintf("FIFO REPLACEMENT \n\n");
+			struct WorkingSetElement* toBeRemoved = curenv->page_last_WS_element ;
+
+			uint32 page_permissions = pt_get_page_permissions(curenv->env_page_directory, (uint32)(toBeRemoved->virtual_address) );
+			if(page_permissions & PERM_MODIFIED)
+			{
+				uint32 *ptr_page_table =NULL ;
+				struct FrameInfo* modified_page_frame_info = get_frame_info(curenv->env_page_directory,(uint32)(toBeRemoved->virtual_address),&ptr_page_table);
+				pf_update_env_page(curenv, (uint32)(toBeRemoved->virtual_address), modified_page_frame_info);
 			}
+
+			LIST_REMOVE(&(curenv->page_WS_list),toBeRemoved);
+
+			unmap_frame(curenv->env_page_directory, (uint32)(toBeRemoved->virtual_address));
+			curenv->page_last_WS_element = LIST_FIRST(&(curenv->page_WS_list));
+
+			struct FrameInfo * frame_to_be_allocated;
+			int return_frame_allocation = allocate_frame(&frame_to_be_allocated);
+			if (return_frame_allocation == 0)
+			{
+
+				int return_map_allcoation = map_frame(curenv->env_page_directory ,frame_to_be_allocated, fault_va,(PERM_PRESENT|PERM_USER|PERM_WRITEABLE));
+				if (return_map_allcoation == 0 )
+				{
+
+					int return_read_pageFile = pf_read_env_page(curenv , (void *)fault_va);
+					if(return_read_pageFile == E_PAGE_NOT_EXIST_IN_PF)
+					{
+
+						//check userHeap & userstack
+						if((fault_va >= USER_HEAP_START && fault_va < USER_HEAP_MAX)||(fault_va <USTACKTOP && fault_va>= USTACKBOTTOM))
+						{
+							struct WorkingSetElement * wseToBeAdded = env_page_ws_list_create_element(curenv,fault_va);
+
+							if (wseToBeAdded==NULL)
+								return;
+
+							LIST_INSERT_TAIL(&(curenv->page_WS_list) , wseToBeAdded);
+
+							return;
+
+						}
+						else
+						{
+							sched_kill_env(curenv->env_id);
+							return;
+						}
+					}
+					else
+					{
+						struct WorkingSetElement * wseToBeAdded = env_page_ws_list_create_element(curenv,fault_va);
+
+						if (wseToBeAdded==NULL)
+							return;
+						LIST_INSERT_TAIL(&(curenv->page_WS_list) , wseToBeAdded);
+						return;
+					}
+
+				}
+			}
+		   }
 		}
 		if(isPageReplacmentAlgorithmLRU(PG_REP_LRU_LISTS_APPROX))
 		{
