@@ -91,7 +91,6 @@ struct Env {
 
         int nice;
 	int recent_cpu;
-	//int load_avg;
 	//================
 	/*ADDRESS SPACE*/
 	//================
