@@ -360,131 +360,136 @@ void page_fault_handler(struct Env * curenv, uint32 fault_va)
 				}
 			}
 		}
-			else{
+		else{
 				//LRU Replacement
-				struct WorkingSetElement* element;
-				LIST_FOREACH(element , &curenv->SecondList){
-					if(fault_va == (uint32)(element->virtual_address) /*&& element == LIST_FIRST(&curenv->SecondList)*/){
+			int found_in_second_list = 0;
+			struct WorkingSetElement * element;
+			LIST_FOREACH(element, &curenv->SecondList){
+				if(ROUNDDOWN(fault_va , PAGE_SIZE) == (uint32)element->virtual_address){
 
-						// Page found in RAM --> LRU
-						struct WorkingSetElement* FIFO_tail = LIST_LAST(&curenv->ActiveList);
-						// Remove Last Element from FIFO
-						LIST_REMOVE(&curenv->ActiveList , FIFO_tail);
-						// Insert the element in the Head of FIFO
-						LIST_INSERT_HEAD(&curenv->ActiveList, element);
-						pt_set_page_permissions(curenv->env_page_directory, fault_va, PERM_PRESENT,0);
-						//struct WorkingSetElement* previous_element = LIST_PREV(element);
-						LIST_REMOVE(&curenv->SecondList , element);
-						LIST_INSERT_HEAD(&curenv->SecondList, FIFO_tail);
-						pt_set_page_permissions(curenv->env_page_directory, fault_va, 0, PERM_PRESENT);
-					}
-					else{
-						// Page found in page file
+					found_in_second_list = 1;
+					break;
+				}
+			}
+			if(found_in_second_list == 1){
+
+				struct WorkingSetElement* FIFO_tail = LIST_LAST(&curenv->ActiveList);
+				// Remove Last Element from FIFO
+				LIST_REMOVE(&curenv->ActiveList , FIFO_tail);
+				// Insert the element in the Head of FIFO
+				LIST_REMOVE(&curenv->SecondList , element);
+				LIST_INSERT_HEAD(&curenv->ActiveList, element);
+				pt_set_page_permissions(curenv->env_page_directory, fault_va, PERM_PRESENT,0);
+				//struct WorkingSetElement* previous_element = LIST_PREV(element);
+				LIST_INSERT_HEAD(&curenv->SecondList, FIFO_tail);
+				pt_set_page_permissions(curenv->env_page_directory, FIFO_tail->virtual_address, 0, PERM_PRESENT);
+			}
+		else
+		{
+			//LRU Replacement
+			int found_in_second_list = 0;
+			struct WorkingSetElement * element;
+			LIST_FOREACH(element, &curenv->SecondList){
+				if(ROUNDDOWN(fault_va , PAGE_SIZE) == (uint32)element->virtual_address){
+
+					found_in_second_list = 1;
+					break;
+				}
+			}
+			if(found_in_second_list == 1){
+
+				struct WorkingSetElement* FIFO_tail = LIST_LAST(&curenv->ActiveList);
+				// Remove Last Element from FIFO
+				LIST_REMOVE(&curenv->ActiveList , FIFO_tail);
+				// Insert the element in the Head of FIFO
+				LIST_REMOVE(&curenv->SecondList , element);
+				LIST_INSERT_HEAD(&curenv->ActiveList, element);
+				pt_set_page_permissions(curenv->env_page_directory, fault_va, PERM_PRESENT,0);
+				//struct WorkingSetElement* previous_element = LIST_PREV(element);
+				LIST_INSERT_HEAD(&curenv->SecondList, FIFO_tail);
+				pt_set_page_permissions(curenv->env_page_directory, FIFO_tail->virtual_address, 0, PERM_PRESENT);
+			}
+			else
+			{
+				struct FrameInfo * frame_to_be_allocated;
+				int return_frame_allocation = allocate_frame(&frame_to_be_allocated);
+				if(return_frame_allocation == 0 ){
+
+					int return_map_allcoation = map_frame(curenv->env_page_directory ,frame_to_be_allocated, fault_va,(PERM_PRESENT|PERM_USER|PERM_WRITEABLE));
+					if (return_map_allcoation == 0 ){
+
 						int return_read_pageFile = pf_read_env_page(curenv , (void *)fault_va);
-						if(return_read_pageFile != E_PAGE_NOT_EXIST_IN_PF){
+						if(return_read_pageFile == E_PAGE_NOT_EXIST_IN_PF)
+						{
+							if((fault_va >= USER_HEAP_START && fault_va < USER_HEAP_MAX) || (fault_va <USTACKTOP && fault_va>= USTACKBOTTOM)){
+								
+								struct WorkingSetElement * wseToBeAdded  = env_page_ws_list_create_element(curenv,fault_va);
 
-							struct FrameInfo * frame_to_be_allocated;
-							int return_frame_allocation = allocate_frame(&frame_to_be_allocated);
-							if (return_frame_allocation == 0 ){
+								if (wseToBeAdded  == NULL)
+									return;
 
-								int return_map_allcoation = map_frame(curenv->env_page_directory ,frame_to_be_allocated, fault_va,(PERM_PRESENT|PERM_USER|PERM_WRITEABLE));
-								if (return_map_allcoation == 0 ){
-
-									struct WorkingSetElement * wseToBeAdded = env_page_ws_list_create_element(curenv,fault_va);
-									struct WorkingSetElement* FIFO_tail = LIST_LAST(&curenv->ActiveList);
-									// Remove Last Element from FIFO
-									LIST_REMOVE(&curenv->ActiveList , FIFO_tail);
-									LIST_INSERT_HEAD(&curenv->ActiveList , wseToBeAdded);//if we should update present bit
-									struct WorkingSetElement* LRU_tail = LIST_LAST(&curenv->SecondList);
-									/*HERE ------>*/uint32 page_permissions = pt_get_page_permissions(curenv->env_page_directory, (uint32)LRU_tail->virtual_address);
-									if(page_permissions & PERM_MODIFIED)
-									{
-										uint32 * ptr_page_table;
-										int ret = get_page_table(curenv->env_page_directory, LRU_tail->virtual_address, &ptr_page_table);
-										struct FrameInfo * victim_frame = get_frame_info(curenv->env_page_directory , LRU_tail->virtual_address, &ptr_page_table);
-										pf_update_env_page(curenv, LRU_tail->virtual_address, victim_frame);
-										//Ask about permissions
-										pt_set_page_permissions(curenv->env_page_directory, LRU_tail->virtual_address, 0, PERM_PRESENT);
-										pt_set_page_permissions(curenv->env_page_directory, LRU_tail->virtual_address, 0, PERM_MODIFIED);
-									}
-									LIST_REMOVE(&curenv->SecondList, LRU_tail);
-									LIST_INSERT_HEAD(&curenv->SecondList, FIFO_tail);
-									pt_set_page_permissions(curenv->env_page_directory, FIFO_tail->virtual_address, 0, PERM_PRESENT);
-
+								struct WorkingSetElement* FIFO_tail = LIST_LAST(&curenv->ActiveList);
+								LIST_REMOVE(&curenv->ActiveList , FIFO_tail);
+								LIST_INSERT_HEAD(&curenv->ActiveList , wseToBeAdded);
+								struct WorkingSetElement* LRU_tail = LIST_LAST(&curenv->SecondList);
+								uint32 page_permissions = pt_get_page_permissions(curenv->env_page_directory, (uint32)LRU_tail->virtual_address);
+								if(page_permissions & PERM_MODIFIED)
+								{
+									uint32 * ptr_page_table;
+									int ret = get_page_table(curenv->env_page_directory, LRU_tail->virtual_address, &ptr_page_table);
+									struct FrameInfo * victim_frame = get_frame_info(curenv->env_page_directory , LRU_tail->virtual_address, &ptr_page_table);
+									pf_update_env_page(curenv, LRU_tail->virtual_address, victim_frame);
+									//Ask about permissions
+									pt_set_page_permissions(curenv->env_page_directory, LRU_tail->virtual_address, 0, PERM_PRESENT);
+									pt_set_page_permissions(curenv->env_page_directory, LRU_tail->virtual_address, 0, PERM_MODIFIED);
 								}
+								LIST_REMOVE(&curenv->SecondList, LRU_tail);
+								unmap_frame(curenv->env_page_directory, LRU_tail->virtual_address);
+								LIST_INSERT_HEAD(&curenv->SecondList, FIFO_tail);
+								pt_set_page_permissions(curenv->env_page_directory, FIFO_tail->virtual_address, 0, PERM_PRESENT);
+								return;
+							}
+							else
+							{
+								sched_kill_env(curenv->env_id);
+								return;
 							}
 						}
-						else
-						{
-							struct FrameInfo * frame_to_be_allocated;
-							int return_frame_allocation = allocate_frame(&frame_to_be_allocated);
-							if (return_frame_allocation == 0)
+						else{
+							// In page file
+							
+							struct WorkingSetElement * wseToBeAdded = env_page_ws_list_create_element(curenv,fault_va);
+							if (wseToBeAdded == NULL)
+								return;
+
+							struct WorkingSetElement* FIFO_tail = LIST_LAST(&curenv->ActiveList);
+							// Remove Last Element from FIFO
+							LIST_REMOVE(&curenv->ActiveList , FIFO_tail);
+							LIST_INSERT_HEAD(&curenv->ActiveList , wseToBeAdded);
+							
+							struct WorkingSetElement* LRU_tail = LIST_LAST(&curenv->SecondList);
+							uint32 page_permissions = pt_get_page_permissions(curenv->env_page_directory, (uint32)LRU_tail->virtual_address);
+							if(page_permissions & PERM_MODIFIED)
 							{
-								int return_map_allcoation = map_frame(curenv->env_page_directory ,frame_to_be_allocated, fault_va,(PERM_PRESENT|PERM_USER|PERM_WRITEABLE));
-								if (return_map_allcoation == 0 )
-								{
-									if((fault_va >= USER_HEAP_START && fault_va < USER_HEAP_MAX))
-									{
-										//heap
-										struct WorkingSetElement * heap_page = env_page_ws_list_create_element(curenv,fault_va);
-										if (heap_page==NULL)
-											return;
-										struct WorkingSetElement* FIFO_tail = LIST_LAST(&curenv->ActiveList);
-										LIST_REMOVE(&curenv->ActiveList , FIFO_tail);
-										LIST_INSERT_HEAD(&curenv->ActiveList , heap_page);//if we should update present bit
-										struct WorkingSetElement* LRU_tail = LIST_LAST(&curenv->SecondList);
-										uint32 page_permissions = pt_get_page_permissions(curenv->env_page_directory, (uint32)LRU_tail->virtual_address);
-										if(page_permissions & PERM_MODIFIED)
-										{
-											uint32 * ptr_page_table;
-											int ret = get_page_table(curenv->env_page_directory, LRU_tail->virtual_address, &ptr_page_table);
-											struct FrameInfo * victim_frame = get_frame_info(curenv->env_page_directory , LRU_tail->virtual_address, &ptr_page_table);
-											pf_update_env_page(curenv, LRU_tail->virtual_address, victim_frame);
-											//Ask about permissions
-											pt_set_page_permissions(curenv->env_page_directory, LRU_tail->virtual_address, 0, PERM_PRESENT);
-											pt_set_page_permissions(curenv->env_page_directory, LRU_tail->virtual_address, 0, PERM_MODIFIED);
-										}
-										LIST_REMOVE(&curenv->SecondList, LRU_tail);
-										LIST_INSERT_HEAD(&curenv->SecondList, FIFO_tail);
-										pt_set_page_permissions(curenv->env_page_directory, FIFO_tail->virtual_address, 0, PERM_PRESENT);
-									}
-									else if ((fault_va <USTACKTOP && fault_va>= USTACKBOTTOM))
-									{
-										//stack
-										struct WorkingSetElement * stack_page = env_page_ws_list_create_element(curenv,fault_va);
-										if (stack_page==NULL)
-											return;
-										struct WorkingSetElement* FIFO_tail = LIST_LAST(&curenv->ActiveList);
-										LIST_REMOVE(&curenv->ActiveList , FIFO_tail);
-										LIST_INSERT_HEAD(&curenv->ActiveList , stack_page);//if we should update present bit
-										struct WorkingSetElement* LRU_tail = LIST_LAST(&curenv->SecondList);
-										uint32 page_permissions = pt_get_page_permissions(curenv->env_page_directory, (uint32)LRU_tail->virtual_address);
-										if(page_permissions & PERM_MODIFIED)
-										{
-											uint32 * ptr_page_table;
-											int ret = get_page_table(curenv->env_page_directory, LRU_tail->virtual_address, &ptr_page_table);
-											struct FrameInfo * victim_frame = get_frame_info(curenv->env_page_directory , LRU_tail->virtual_address, &ptr_page_table);
-											pf_update_env_page(curenv, LRU_tail->virtual_address, victim_frame);
-											//Ask about permissions
-											pt_set_page_permissions(curenv->env_page_directory, LRU_tail->virtual_address, 0, PERM_PRESENT);
-											pt_set_page_permissions(curenv->env_page_directory, LRU_tail->virtual_address, 0, PERM_MODIFIED);
-										}
-										LIST_REMOVE(&curenv->SecondList, LRU_tail);
-										LIST_INSERT_HEAD(&curenv->SecondList, FIFO_tail);
-										pt_set_page_permissions(curenv->env_page_directory, FIFO_tail->virtual_address, 0, PERM_PRESENT);
-										
-										/*if invalid access*/
-										
-										
-									}
-
-								}
+								uint32 * ptr_page_table;
+								int ret = get_page_table(curenv->env_page_directory, LRU_tail->virtual_address, &ptr_page_table);
+								struct FrameInfo * victim_frame = get_frame_info(curenv->env_page_directory , LRU_tail->virtual_address, &ptr_page_table);
+								pf_update_env_page(curenv, LRU_tail->virtual_address, victim_frame);
+								//Ask about permissions
+								pt_set_page_permissions(curenv->env_page_directory, LRU_tail->virtual_address, 0, PERM_PRESENT);
+								pt_set_page_permissions(curenv->env_page_directory, LRU_tail->virtual_address, 0, PERM_MODIFIED);
 							}
-
+							LIST_REMOVE(&curenv->SecondList, LRU_tail);
+							unmap_frame(curenv->env_page_directory, LRU_tail->virtual_address);
+							LIST_INSERT_HEAD(&curenv->SecondList, FIFO_tail);
+							pt_set_page_permissions(curenv->env_page_directory, FIFO_tail->virtual_address, 0, PERM_PRESENT);
+							return;
 						}
 					}
 				}
 			}
+			
+		}
 			//TODO: [PROJECT'23.MS3 - BONUS] [1] PAGE FAULT HANDLER - O(1) implementation of LRU replacement
 		}
 	}
