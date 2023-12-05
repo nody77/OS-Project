@@ -158,35 +158,109 @@ void free_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 	/*==========================================================================*/
 	//TODO: [PROJECT'23.MS2 - #12] [2] USER HEAP - free_user_mem() [Kernel Side]
 	/*REMOVE THESE LINES BEFORE START CODING */
-//	inctst();
-//	return;
+	//inctst();
+	//return;
 	/*==========================================================================*/
 
 	// Write your code here, remove the panic and write your code
 	//panic("free_user_mem() is not implemented yet...!!");
 
 	//TODO: [PROJECT'23.MS2 - BONUS#2] [2] USER HEAP - free_user_mem() IN O(1): removing page from WS List instead of searching the entire list
-	if(size <= PAGE_SIZE)
-	{
-		pt_set_page_permissions(e->env_page_directory, virtual_address ,0, PERM_AVAILABLE);
-		pf_remove_env_page(e,virtual_address);
-		env_page_ws_invalidate( e,virtual_address);
-	}
-	else
-	{
-		uint32 newVirtualAddress=virtual_address;
-		uint32 numOfPages=size/PAGE_SIZE;
-		for(uint32 i=0;i<numOfPages;i++)
+	//if(size <= PAGE_SIZE)
+	//{
+		//pt_set_page_permissions(e->env_page_directory, virtual_address ,0, PERM_AVAILABLE);
+		//pf_remove_env_page(e,virtual_address);
+		//env_page_ws_invalidate( e,virtual_address);
+	//}
+	//else
+	//{
+		//uint32 newVirtualAddress=virtual_address;
+		uint32 numOfPages = ROUNDUP(size , PAGE_SIZE)/PAGE_SIZE;
+		for(uint32 i=0; i<numOfPages; i++)
 		{
-			pt_set_page_permissions(e->env_page_directory, newVirtualAddress ,0, PERM_AVAILABLE);
-			pf_remove_env_page(e,newVirtualAddress);
-			env_page_ws_invalidate( e,newVirtualAddress);
-			newVirtualAddress=newVirtualAddress+PAGE_SIZE;
+			pt_set_page_permissions(e->env_page_directory, virtual_address ,0, PERM_AVAILABLE);
+			pt_set_page_permissions(e->env_page_directory, virtual_address ,0, PERM_WRITEABLE);
+			pt_set_page_permissions(e->env_page_directory, virtual_address ,0, PERM_USER);
+			//increament the e->page_last_WS_element by one
+			if(e->page_last_WS_element->virtual_address == virtual_address)
+						{
+							e->page_last_WS_element = LIST_NEXT(e->page_last_WS_element);
+						}
+			unmap_frame(e->env_page_directory, virtual_address);
+			pt_clear_page_table_entry(e->env_page_directory, virtual_address);
+			pf_remove_env_page(e,virtual_address);
+			env_page_ws_invalidate(e,virtual_address);
+			//e->page_last_WS_element = NULL;
+			virtual_address = virtual_address + PAGE_SIZE;
 		}
 
-	}
-}
+		/*Scenario 1
+		 * 1 - 2 - 3 - 4 - 5(last) - 6 - 7 - 8
+		 *
+		 * after freeing 6 7 8
+		 *
+		 * 1 - 2 - 3 - 4 - 5(last) ==> 5(last) - 1 - 2 - 3 - 4
+		 *
+		 */
+		struct WorkingSetElement* element;
+		struct WorkingSetElement* temp_element;
+		if(LIST_NEXT(e->page_last_WS_element)== NULL)
+		{
+			LIST_FOREACH(element, &(e->page_WS_list))
+					{
+						if(LIST_FIRST(&(e->page_WS_list))==e->page_last_WS_element)
+						{
+							break;
+						}
+						else
+						{
+							temp_element = LIST_FIRST(&(e->page_WS_list));
+							LIST_REMOVE(&(e->page_WS_list),temp_element);
+							LIST_INSERT_TAIL(&(e->page_WS_list),temp_element);
 
+						}
+					}
+		}
+		/*Scenario 2
+		 * 1 - 2 - 3 - 4 - 5(last) - 6 - 7 - 8
+		 *
+		 * after freeing 6 7
+		 *
+		 * 1 - 2 - 3 - 4 - 5(last) ==> 5(last)- 8 - 1 - 2 - 3 - 4
+		 *
+		 */
+
+		/*Scenario 3
+		 * 1 - 2 - 3 - 4 - 5(last) - 6 - 7 - 8
+		 *
+		 * after freeing 5(last) - 6 - 7
+		 *
+		 * 1 - 2 - 3 - 4 - 5(last) ==> 8(last) - 1 - 2 - 3 - 4
+		 *
+		 */
+
+		else
+		{
+			LIST_FOREACH(element, &(e->page_WS_list))
+					{
+						if(LIST_FIRST(&(e->page_WS_list))==e->page_last_WS_element)
+						{
+							break;
+						}
+						else
+						{
+							temp_element = LIST_FIRST(&(e->page_WS_list));
+							LIST_REMOVE(&(e->page_WS_list),temp_element);
+							LIST_INSERT_TAIL(&(e->page_WS_list),temp_element);
+
+						}
+					}
+		}
+
+
+
+
+}
 //=====================================
 // 2) FREE USER MEMORY (BUFFERING):
 //=====================================
