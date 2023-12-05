@@ -520,7 +520,7 @@ void* sys_sbrk(int increment)
 			env->segmentBreak = newBreak;
 			uint32 *ptrToUserPageTable=NULL;
 			uint32 newVirtualAddress=ROUNDUP((uint32)oldBreak,PAGE_SIZE);
-			int tableFoundCheck =get_page_table(ptr_page_directory,newVirtualAddress,&(ptrToUserPageTable));
+			int tableFoundCheck =get_page_table(env->env_page_directory,newVirtualAddress,&(ptrToUserPageTable));
 			if(tableFoundCheck==TABLE_NOT_EXIST)
 			{
 				ptrToUserPageTable = create_page_table(env->env_page_directory,newVirtualAddress);
@@ -572,11 +572,11 @@ void* sys_sbrk(int increment)
 			oldSegmentBreak = ROUNDUP(oldSegmentBreak,PAGE_SIZE);
 			uint32 numOfPages = (uint32)(oldSegmentBreak-tmp)/PAGE_SIZE;
 			uint32 *ptrToUserPageTable=NULL;
-			int tableFoundCheck =get_page_table(ptr_page_directory,(uint32)tmp,&(ptrToUserPageTable));
+			int tableFoundCheck =get_page_table(env->env_page_directory,(uint32)tmp,&(ptrToUserPageTable));
 
 			for(int i= 0;i<numOfPages;i++)
 			{
-				//unmark 
+				//unmark
 				pt_set_page_permissions(env->env_page_directory, (uint32)tmp,0,PERM_AVAILABLE);
 				//ptrToUserPageTable [PTX((uint32)tmp)]=ptrToUserPageTable[PTX((uint32)tmp)] & ~(PERM_AVAILABLE);
 				// remove from working set if found
