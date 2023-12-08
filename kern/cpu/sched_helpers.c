@@ -9,7 +9,7 @@
 #include <kern/tests/utilities.h>
 #include <kern/cmd/command_prompt.h>
 
-int load_avg;
+fixed_point_t load_avg;
 //void on_clock_update_WS_time_stamps();
 extern void cleanup_buffers(struct Env* e);
 //================
@@ -561,8 +561,18 @@ void env_set_nice(struct Env* e, int nice_value)
 
 	//should we check if the priority is within the range [PRI_MIN,PRI_MAX]
 	e->nice = nice_value;
-	int newPriority = PRI_MAX- (e->recent_cpu / 4) - (e->nice * 2);
-	e->priority = fix_trunc(fix_int(newPriority));
+	fixed_point_t temp_nice  = fix_int(e->nice * 2);
+	fixed_point_t  temp_recent = fix_unscale(e->recent_cpu ,4);
+	fixed_point_t temp_priMax = fix_int(PRI_MAX);
+
+	fixed_point_t temp1 =fix_sub(temp_recent,temp_nice);
+
+	fixed_point_t newPriority  =fix_sub(temp_priMax,temp1);
+
+	//newPriority = fix_int(PRI_MAX) - fix_unscale(e->recent_cpu ,4) - fix_int(e->nice * 2) ;
+	//fixed_point_t newPriority = fix_int(PRI_MAX) - fix_unscale(e->recent_cpu , 4) - fix_int(e->nice*2);
+	e->priority = fix_trunc(newPriority);
+
 
 }
 int env_get_recent_cpu(struct Env* e)
@@ -574,8 +584,9 @@ int env_get_recent_cpu(struct Env* e)
 //	return 0;
 
 	// unsure
-	int newRecentCPU = 100 * e->recent_cpu;
-	return fix_round(fix_int(newRecentCPU));
+  //  fixed_point_t newRecentCPU = 100 * e->recent_cpu;
+	fixed_point_t newRecentCPU = fix_scale(e->recent_cpu,100);
+	return fix_round(newRecentCPU);
 
 }
 int get_load_average()
@@ -586,8 +597,9 @@ int get_load_average()
 //	panic("Not implemented yet");
 //	return 0;
 
-	int newLoadAVG = 100 * load_avg;
-    return fix_round(fix_int(load_avg));
+	//fixed_point_t newLoadAVG = 100 * load_avg;
+	fixed_point_t newLoadAVG = fix_scale(load_avg,100);
+    return fix_round(load_avg);
 }
 /********* for BSD Priority Scheduler *************/
 //==================================================================================//
