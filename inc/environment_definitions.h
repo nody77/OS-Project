@@ -1,5 +1,5 @@
 /* See COPYRIGHT for copyright information. */
-
+#include <inc/fixed_point.h>
 #ifndef FOS_INC_ENV_H
 #define FOS_INC_ENV_H
 
