@@ -11,6 +11,7 @@
 #include "../disk/pagefile_manager.h"
 #include "../mem/memory_manager.h"
 
+#include <kern/mem/kheap.h>
 //2014 Test Free(): Set it to bypass the PAGE FAULT on an instruction with this length and continue executing the next one
 // 0 means don't bypass the PAGE FAULT
 uint8 bypassInstrLength = 0;
@@ -88,18 +89,12 @@ void page_fault_handler(struct Env * curenv, uint32 fault_va)
 		//refer to the project presentation and documentation for details
 		if(isPageReplacmentAlgorithmFIFO())
 		{
-			//TODO: [PROJECT'23.MS3 - #1] [1] PAGE FAULT HANDLER - FIFO Replacement
-			// Write your code here, remove the panic and write your code
-			//cprintf("in FIFO Replacement\n");
 			if(wsSize < (curenv->page_WS_max_size))
 			{
 				//cprintf("PLACEMENT=========================WS Size = %d\n", wsSize );
 				//TODO: [PROJECT'23.MS2 - #15] [3] PAGE FAULT HANDLER - Placement
 				// Write your code here, remove the panic and write your code
 				//panic("page_fault_handler().PLACEMENT is not implemented yet...!!");
-				cprintf("entered FIFO placement\n");
-				env_page_ws_print(curenv);
-				//cprintf("size = %d\n",LIST_SIZE(&(curenv->page_WS_list)));
 				struct FrameInfo * frame_to_be_allocated;
 				int return_frame_allocation = allocate_frame(&frame_to_be_allocated);
 				if (return_frame_allocation == 0)
@@ -140,7 +135,7 @@ void page_fault_handler(struct Env * curenv, uint32 fault_va)
 							}
 							else if ((fault_va <USTACKTOP && fault_va>= USTACKBOTTOM))
 							{
-								cprintf("stack page\n");
+								//cprintf("stack page\n");
 								struct WorkingSetElement * wseToBeAdded = env_page_ws_list_create_element(curenv,fault_va);
 								if (wseToBeAdded==NULL)
 									return;
@@ -179,85 +174,96 @@ void page_fault_handler(struct Env * curenv, uint32 fault_va)
 
 						else
 							curenv->page_last_WS_element = NULL;
-						env_page_ws_print(curenv);
+						//env_page_ws_print(curenv);
 						return;
 					}
 				}
 				//refer to the project presentation and documentation for details
 			}
-			else{
-			//TODO: [PROJECT'23.MS3 - #1] [1] PAGE FAULT HANDLER - FIFO Replacement
-			// Write your code here, remove the panic and write your code
-			//panic("page_fault_handler() FIFO Replacement is not implemented yet...!!");
-			//cprintf("FIFO REPLACEMENT \n\n");
-			struct WorkingSetElement* toBeRemoved = curenv->page_last_WS_element ;
-			int temp = 0;
-			uint32 page_permissions = pt_get_page_permissions(curenv->env_page_directory, (uint32)(toBeRemoved->virtual_address) );
-			if(page_permissions & PERM_MODIFIED)
-			{
-				uint32 *ptr_page_table =NULL ;
-				struct FrameInfo* modified_page_frame_info = get_frame_info(curenv->env_page_directory,(uint32)(toBeRemoved->virtual_address),&ptr_page_table);
-				pf_update_env_page(curenv, (uint32)(toBeRemoved->virtual_address), modified_page_frame_info);
-			}
-
-			struct WorkingSetElement* element;
-//				cprintf("#############################\n\n");
-//				LIST_FOREACH(element, &(curenv->page_WS_list))
-//				{
-//					cprintf("element : %x \n", element);
-//				}
-//				cprintf("toBeRemoved : %x \n", toBeRemoved);
-//				cprintf("LIST_LAST(&(curenv->page_WS_list)):%x \n",LIST_LAST(&(curenv->page_WS_list)));
-//				cprintf("LIST_FIRST(&(curenv->page_WS_list) :%x \n",LIST_FIRST(&(curenv->page_WS_list)));
-
-
-			//if toBeRemoved is the last element
-			if(LIST_NEXT(toBeRemoved) == NULL)
-			{
-				temp = 1;
-				curenv->page_last_WS_element = LIST_FIRST(&(curenv->page_WS_list));
-			}
-			//if toBeRemoved is the first element
-			else if (LIST_PREV(toBeRemoved) == NULL)
-			{
-				temp = 2;
-				curenv->page_last_WS_element = LIST_NEXT(toBeRemoved);
-			}
-			//if toBeRemoved is in the middle
 			else
 			{
-				curenv->page_last_WS_element = LIST_NEXT(toBeRemoved);
-			}
+				//TODO: [PROJECT'23.MS3 - #1] [1] PAGE FAULT HANDLER - FIFO Replacement
+				// Write your code here, remove the panic and write your code
+				//panic("page_fault_handler() FIFO Replacement is not implemented yet...!!");
+				//cprintf("FIFO REPLACEMENT \n\n");
+				struct WorkingSetElement* toBeRemoved = curenv->page_last_WS_element ;
+				int temp = 0;
+				uint32 page_permissions = pt_get_page_permissions(curenv->env_page_directory, (uint32)(toBeRemoved->virtual_address) );
+				if(page_permissions & PERM_MODIFIED)
+				{
+					uint32 *ptr_page_table =NULL ;
+					struct FrameInfo* modified_page_frame_info = get_frame_info(curenv->env_page_directory,(uint32)(toBeRemoved->virtual_address),&ptr_page_table);
+					pf_update_env_page(curenv, (uint32)(toBeRemoved->virtual_address), modified_page_frame_info);
+				}
 
-//				cprintf("temp : %d\n",temp);
-//				cprintf("list curenv->page_last_WS_element : %x \n",curenv->page_last_WS_element);
-//				cprintf("list next curenv->page_last_WS_element : %x \n",LIST_NEXT(curenv->page_last_WS_element));
-//				cprintf("#############################\n\n");
-			unmap_frame(curenv->env_page_directory, (uint32)(toBeRemoved->virtual_address));
+				struct WorkingSetElement* element;
+				if(LIST_NEXT(toBeRemoved) == NULL)
+				{
+					temp = 1;
+					curenv->page_last_WS_element = LIST_FIRST(&(curenv->page_WS_list));
+				}
+				//if toBeRemoved is the first element
+				else if (LIST_PREV(toBeRemoved) == NULL)
+				{
+					temp = 2;
+					curenv->page_last_WS_element = LIST_NEXT(toBeRemoved);
+				}
+				//if toBeRemoved is in the middle
+				else
+				{
+					curenv->page_last_WS_element = LIST_NEXT(toBeRemoved);
+				}
+				unmap_frame(curenv->env_page_directory, (uint32)(toBeRemoved->virtual_address));
 
-			LIST_REMOVE(&(curenv->page_WS_list),toBeRemoved);
+				LIST_REMOVE(&(curenv->page_WS_list),toBeRemoved);
 
-			kfree(toBeRemoved);
-
-
-			//curenv->page_last_WS_element = LIST_FIRST(&(curenv->page_WS_list));
-
-
-			struct FrameInfo * frame_to_be_allocated;
-			int return_frame_allocation = allocate_frame(&frame_to_be_allocated);
-			if (return_frame_allocation == 0)
-			{
-
-				int return_map_allcoation = map_frame(curenv->env_page_directory ,frame_to_be_allocated, fault_va,(PERM_PRESENT|PERM_USER|PERM_WRITEABLE));
-				if (return_map_allcoation == 0 )
+				kfree(toBeRemoved);
+				struct FrameInfo * frame_to_be_allocated;
+				int return_frame_allocation = allocate_frame(&frame_to_be_allocated);
+				if (return_frame_allocation == 0)
 				{
 
-					int return_read_pageFile = pf_read_env_page(curenv , (void *)fault_va);
-					if(return_read_pageFile == E_PAGE_NOT_EXIST_IN_PF)
+					int return_map_allcoation = map_frame(curenv->env_page_directory ,frame_to_be_allocated, fault_va,(PERM_PRESENT|PERM_USER|PERM_WRITEABLE));
+					if (return_map_allcoation == 0 )
 					{
 
-						//check userHeap & userstack
-						if((fault_va >= USER_HEAP_START && fault_va < USER_HEAP_MAX)||(fault_va <USTACKTOP && fault_va>= USTACKBOTTOM))
+						int return_read_pageFile = pf_read_env_page(curenv , (void *)fault_va);
+						if(return_read_pageFile == E_PAGE_NOT_EXIST_IN_PF)
+						{
+
+							//check userHeap & userstack
+							if((fault_va >= USER_HEAP_START && fault_va < USER_HEAP_MAX)||(fault_va <USTACKTOP && fault_va>= USTACKBOTTOM))
+							{
+								struct WorkingSetElement * wseToBeAdded = env_page_ws_list_create_element(curenv,fault_va);
+
+								if (wseToBeAdded==NULL)
+									return;
+
+								//if last element
+								if(temp==1)
+								{
+									LIST_INSERT_TAIL(&(curenv->page_WS_list) , wseToBeAdded);
+								}
+								//if first element
+								else if(temp == 2)
+								{
+									LIST_INSERT_HEAD(&(curenv->page_WS_list) , wseToBeAdded);
+								}
+								//if in the middle
+								else
+								{
+									LIST_INSERT_BEFORE(&(curenv->page_WS_list), curenv->page_last_WS_element , wseToBeAdded);
+								}
+								return;
+
+							}
+							else
+							{
+								sched_kill_env(curenv->env_id);
+								return;
+							}
+						}
+						else
 						{
 							struct WorkingSetElement * wseToBeAdded = env_page_ws_list_create_element(curenv,fault_va);
 
@@ -279,58 +285,11 @@ void page_fault_handler(struct Env * curenv, uint32 fault_va)
 							{
 								LIST_INSERT_BEFORE(&(curenv->page_WS_list), curenv->page_last_WS_element , wseToBeAdded);
 							}
-//								cprintf("=============================================\n");
-//								LIST_FOREACH(element, &(curenv->page_WS_list))
-//								{
-//
-//									cprintf("element 1 : %x \n", element->virtual_address);
-//
-//
-//								}
-//								cprintf("=============================================\n");
 							return;
+						}
 
-						}
-						else
-						{
-							sched_kill_env(curenv->env_id);
-							return;
-						}
 					}
-					else
-					{
-						struct WorkingSetElement * wseToBeAdded = env_page_ws_list_create_element(curenv,fault_va);
-
-						if (wseToBeAdded==NULL)
-							return;
-
-						//if last element
-						if(temp==1)
-						{
-							LIST_INSERT_TAIL(&(curenv->page_WS_list) , wseToBeAdded);
-						}
-						//if first element
-						else if(temp == 2)
-						{
-							LIST_INSERT_HEAD(&(curenv->page_WS_list) , wseToBeAdded);
-						}
-						//if in the middle
-						else
-						{
-							LIST_INSERT_BEFORE(&(curenv->page_WS_list), curenv->page_last_WS_element , wseToBeAdded);
-						}
-
-//							cprintf("=============================================\n");
-//						LIST_FOREACH(element, &(curenv->page_WS_list))
-//						{
-//							cprintf("element 2 : %x \n", element->virtual_address);
-//						}
-//						cprintf("=============================================\n");
-						return;
-					}
-
 				}
-			}
 		   }
 		}
 		if(isPageReplacmentAlgorithmLRU(PG_REP_LRU_LISTS_APPROX))
@@ -338,11 +297,8 @@ void page_fault_handler(struct Env * curenv, uint32 fault_va)
 			//TODO: [PROJECT'23.MS3 - #2] [1] PAGE FAULT HANDLER - LRU Replacement
 			// Write your code here, remove the panic and write your code
 			//panic("page_fault_handler() LRU Replacement is not implemented yet...!!");
-			env_page_ws_print(curenv);
-			cprintf("in LRU placement\n");
 			//env_page_ws_print(curenv);
-			//cprintf("in LRU placement\n");
-			if(LIST_SIZE(&curenv->ActiveList)+LIST_SIZE(&curenv->SecondList)<curenv->page_WS_max_size)
+		if(LIST_SIZE(&curenv->ActiveList)+LIST_SIZE(&curenv->SecondList)<curenv->page_WS_max_size)
 		{
 			int found_in_second_list = 0;
 			struct WorkingSetElement * element;
@@ -504,7 +460,7 @@ void page_fault_handler(struct Env * curenv, uint32 fault_va)
 						if(return_read_pageFile == E_PAGE_NOT_EXIST_IN_PF)
 						{
 							if((fault_va >= USER_HEAP_START && fault_va < USER_HEAP_MAX) || (fault_va <USTACKTOP && fault_va>= USTACKBOTTOM)){
-								
+
 								struct WorkingSetElement * wseToBeAdded  = env_page_ws_list_create_element(curenv,fault_va);
 
 								if (wseToBeAdded  == NULL)
@@ -539,7 +495,7 @@ void page_fault_handler(struct Env * curenv, uint32 fault_va)
 						}
 						else{
 							// In page file
-							
+
 							struct WorkingSetElement * wseToBeAdded = env_page_ws_list_create_element(curenv,fault_va);
 							if (wseToBeAdded == NULL)
 								return;
@@ -548,7 +504,7 @@ void page_fault_handler(struct Env * curenv, uint32 fault_va)
 							// Remove Last Element from FIFO
 							LIST_REMOVE(&curenv->ActiveList , FIFO_tail);
 							LIST_INSERT_HEAD(&curenv->ActiveList , wseToBeAdded);
-							
+
 							struct WorkingSetElement* LRU_tail = LIST_LAST(&curenv->SecondList);
 							uint32 page_permissions = pt_get_page_permissions(curenv->env_page_directory, (uint32)LRU_tail->virtual_address);
 							if(page_permissions & PERM_MODIFIED)
@@ -570,16 +526,13 @@ void page_fault_handler(struct Env * curenv, uint32 fault_va)
 					}
 				}
 			}
-			
+
 		}
 			//TODO: [PROJECT'23.MS3 - BONUS] [1] PAGE FAULT HANDLER - O(1) implementation of LRU replacement
 		}
 	}
-
+}
 void __page_fault_handler_with_buffering(struct Env * curenv, uint32 fault_va)
 {
 	panic("this function is not required...!!");
 }
-
-
-
