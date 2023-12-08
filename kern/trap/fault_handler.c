@@ -191,7 +191,7 @@ void page_fault_handler(struct Env * curenv, uint32 fault_va)
 			//panic("page_fault_handler() FIFO Replacement is not implemented yet...!!");
 			//cprintf("FIFO REPLACEMENT \n\n");
 			struct WorkingSetElement* toBeRemoved = curenv->page_last_WS_element ;
-
+			int temp = 0;
 			uint32 page_permissions = pt_get_page_permissions(curenv->env_page_directory, (uint32)(toBeRemoved->virtual_address) );
 			if(page_permissions & PERM_MODIFIED)
 			{
@@ -200,10 +200,48 @@ void page_fault_handler(struct Env * curenv, uint32 fault_va)
 				pf_update_env_page(curenv, (uint32)(toBeRemoved->virtual_address), modified_page_frame_info);
 			}
 
+			struct WorkingSetElement* element;
+//				cprintf("#############################\n\n");
+//				LIST_FOREACH(element, &(curenv->page_WS_list))
+//				{
+//					cprintf("element : %x \n", element);
+//				}
+//				cprintf("toBeRemoved : %x \n", toBeRemoved);
+//				cprintf("LIST_LAST(&(curenv->page_WS_list)):%x \n",LIST_LAST(&(curenv->page_WS_list)));
+//				cprintf("LIST_FIRST(&(curenv->page_WS_list) :%x \n",LIST_FIRST(&(curenv->page_WS_list)));
+
+
+			//if toBeRemoved is the last element
+			if(LIST_NEXT(toBeRemoved) == NULL)
+			{
+				temp = 1;
+				curenv->page_last_WS_element = LIST_FIRST(&(curenv->page_WS_list));
+			}
+			//if toBeRemoved is the first element
+			else if (LIST_PREV(toBeRemoved) == NULL)
+			{
+				temp = 2;
+				curenv->page_last_WS_element = LIST_NEXT(toBeRemoved);
+			}
+			//if toBeRemoved is in the middle
+			else
+			{
+				curenv->page_last_WS_element = LIST_NEXT(toBeRemoved);
+			}
+
+//				cprintf("temp : %d\n",temp);
+//				cprintf("list curenv->page_last_WS_element : %x \n",curenv->page_last_WS_element);
+//				cprintf("list next curenv->page_last_WS_element : %x \n",LIST_NEXT(curenv->page_last_WS_element));
+//				cprintf("#############################\n\n");
+			unmap_frame(curenv->env_page_directory, (uint32)(toBeRemoved->virtual_address));
+
 			LIST_REMOVE(&(curenv->page_WS_list),toBeRemoved);
 
-			unmap_frame(curenv->env_page_directory, (uint32)(toBeRemoved->virtual_address));
-			curenv->page_last_WS_element = LIST_FIRST(&(curenv->page_WS_list));
+			kfree(toBeRemoved);
+
+
+			//curenv->page_last_WS_element = LIST_FIRST(&(curenv->page_WS_list));
+
 
 			struct FrameInfo * frame_to_be_allocated;
 			int return_frame_allocation = allocate_frame(&frame_to_be_allocated);
@@ -226,8 +264,30 @@ void page_fault_handler(struct Env * curenv, uint32 fault_va)
 							if (wseToBeAdded==NULL)
 								return;
 
-							LIST_INSERT_TAIL(&(curenv->page_WS_list) , wseToBeAdded);
-
+							//if last element
+							if(temp==1)
+							{
+								LIST_INSERT_TAIL(&(curenv->page_WS_list) , wseToBeAdded);
+							}
+							//if first element
+							else if(temp == 2)
+							{
+								LIST_INSERT_HEAD(&(curenv->page_WS_list) , wseToBeAdded);
+							}
+							//if in the middle
+							else
+							{
+								LIST_INSERT_BEFORE(&(curenv->page_WS_list), curenv->page_last_WS_element , wseToBeAdded);
+							}
+//								cprintf("=============================================\n");
+//								LIST_FOREACH(element, &(curenv->page_WS_list))
+//								{
+//
+//									cprintf("element 1 : %x \n", element->virtual_address);
+//
+//
+//								}
+//								cprintf("=============================================\n");
 							return;
 
 						}
@@ -243,7 +303,29 @@ void page_fault_handler(struct Env * curenv, uint32 fault_va)
 
 						if (wseToBeAdded==NULL)
 							return;
-						LIST_INSERT_TAIL(&(curenv->page_WS_list) , wseToBeAdded);
+
+						//if last element
+						if(temp==1)
+						{
+							LIST_INSERT_TAIL(&(curenv->page_WS_list) , wseToBeAdded);
+						}
+						//if first element
+						else if(temp == 2)
+						{
+							LIST_INSERT_HEAD(&(curenv->page_WS_list) , wseToBeAdded);
+						}
+						//if in the middle
+						else
+						{
+							LIST_INSERT_BEFORE(&(curenv->page_WS_list), curenv->page_last_WS_element , wseToBeAdded);
+						}
+
+//							cprintf("=============================================\n");
+//						LIST_FOREACH(element, &(curenv->page_WS_list))
+//						{
+//							cprintf("element 2 : %x \n", element->virtual_address);
+//						}
+//						cprintf("=============================================\n");
 						return;
 					}
 
