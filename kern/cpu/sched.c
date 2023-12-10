@@ -166,6 +166,7 @@ void sched_init_BSD(uint8 numOfLevels, uint8 quantum)
 	//Your code is here
 	//Comment the following line
 	//panic("Not implemented yet");
+	load_avg = fix_int(0);
 	num_of_ready_queues = numOfLevels;
 	env_ready_queues = kmalloc(sizeof(struct Env_Queue) * num_of_ready_queues);
 	quantums = kmalloc(num_of_ready_queues * sizeof(uint8));
