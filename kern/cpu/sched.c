@@ -233,7 +233,7 @@ void clock_interrupt_handler()
 		{
 			fixed_point_t frac1 = fix_mul(fix_int(59), fix_int(60));
 			fixed_point_t old_load_avg = fix_int(get_load_average());
-			fixed_point_t temp1 = fix_scale(old_load_avg,frac1 );//need to change
+			fixed_point_t temp1 = fix_mul(old_load_avg,frac1 );//need to change
 			int noOfreadyprocesses = 0 ;
 			for(int i = 0 ; i<num_of_ready_queues ; i++)
 			{
@@ -306,7 +306,6 @@ void clock_interrupt_handler()
 	fos_scheduler();
 	/*****************************************/
 }
-
 
 //===================================================================
 // [9] Update LRU Timestamp of WS Elements
