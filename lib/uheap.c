@@ -118,14 +118,12 @@ void* malloc(uint32 size)
 //=================================
 void free(void* virtual_address)
 {
-	void * SegmentBrk = sys_sbrk(0);
+	uint32 * SegmentBrk = (uint32*)sys_sbrk(0);
 	//uint32 * HardLimit = (uint32*)sys_hardlimit();
-	void * HardLimit =sys_hardlimit();
-	if(virtual_address>= (void*) USER_HEAP_START && virtual_address < SegmentBrk)
-	{
-		free_block(virtual_address);
-	}
-	else if (virtual_address >=  (HardLimit+PAGE_SIZE) && virtual_address <(void*) USER_HEAP_MAX)
+	uint32 * HardLimit = (uint32*)sys_hardlimit();
+	uint32 * Start = (uint32*)sys_uheapStart();
+
+	if ((virtual_address == ((void *)HardLimit + PAGE_SIZE) || virtual_address > ((void *)HardLimit + PAGE_SIZE)) && virtual_address < (void*) USER_HEAP_MAX)
 	{
 		uint32 size;
 		uint32 index = 0;
@@ -142,11 +140,19 @@ void free(void* virtual_address)
 				uint32 end_index = number_of_allocated_frames + index;
 				for(int i = index; i < end_index; i+=1)
 				{
-					user_Page_Allocation_list[i].is_free = 1;
+					user_Page_Allocation_list[i].is_free = 0;
 					user_Page_Allocation_list[i].size = 0;
 					user_Page_Allocation_list[i].virtual_address = 0;
 				}
 				sys_free_user_mem((uint32)virtual_address,size);
+				return;
+
+	}
+	else if(virtual_address < (void *)SegmentBrk)
+	{
+		if(virtual_address >= (void *)USER_HEAP_START){
+			free_block(virtual_address);
+		}
 
 	}
 	else
@@ -154,9 +160,6 @@ void free(void* virtual_address)
 		panic("invalid address\n");
 	}
 }
-
-
-
 //=================================
 // [4] ALLOCATE SHARED VARIABLE:
 //=================================
