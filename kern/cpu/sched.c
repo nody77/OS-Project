@@ -208,7 +208,7 @@ struct Env* fos_scheduler_BSD()
 	struct Env* enviroment ;
 	if (curenv != NULL)
 	{
-		enqueue(&(env_ready_queues[curenv.priority]), curenv);
+		enqueue(&(env_ready_queues[curenv->priority]), curenv);
 	}
 	for(int i = num_of_ready_queues; i >= 0; i--) {
 		int sizeOfQueue = queue_size(&(env_ready_queues[i]));
