@@ -564,14 +564,39 @@ void env_set_nice(struct Env* e, int nice_value)
 	fixed_point_t temp_nice  = fix_int(e->nice * 2);
 	fixed_point_t  temp_recent = fix_unscale(e->recent_cpu ,4);
 	fixed_point_t temp_priMax = fix_int(PRI_MAX);
-
 	fixed_point_t temp1 =fix_sub(temp_recent,temp_nice);
-
 	fixed_point_t newPriority  =fix_sub(temp_priMax,temp1);
+	int rounded_priority = fix_trunc(newPriority);
 
-	//newPriority = fix_int(PRI_MAX) - fix_unscale(e->recent_cpu ,4) - fix_int(e->nice * 2) ;
-	//fixed_point_t newPriority = fix_int(PRI_MAX) - fix_unscale(e->recent_cpu , 4) - fix_int(e->nice*2);
-	e->priority = fix_trunc(newPriority);
+	if(rounded_priority < 0)
+	{
+		e->priority = 0;
+	}
+	else if(rounded_priority >= num_of_ready_queues)
+	{
+		e->priority = (num_of_ready_queues-1);
+	}
+	else
+	{
+		e->priority = rounded_priority;
+	}
+
+	for(int i = 0;i<num_of_ready_queues ; i++)
+	{
+		struct Env * ENV ;
+		struct Env * tmp ;
+
+		LIST_FOREACH(ENV,&(env_ready_queues[i]))
+		{
+			if(ENV->priority != i )
+			{
+				tmp = ENV;
+				remove_from_queue(&(env_ready_queues[i]),tmp);
+				enqueue(&(env_ready_queues[tmp->priority]), tmp);
+
+			}
+		}
+	}
 
 
 }
