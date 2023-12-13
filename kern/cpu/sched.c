@@ -224,6 +224,10 @@ struct Env* fos_scheduler_BSD()
 // [8] Clock Interrupt Handler
 //	  (Automatically Called Every Quantum)
 //========================================
+//========================================
+// [8] Clock Interrupt Handler
+//	  (Automatically Called Every Quantum)
+//========================================
 void clock_interrupt_handler()
 {
 	//TODO: [PROJECT'23.MS3 - #5] [2] BSD SCHEDULER - Your code is here
@@ -232,7 +236,7 @@ void clock_interrupt_handler()
 		if(timer_ticks()%1000) //need to change
 		{
 			fixed_point_t frac1 = fix_mul(fix_int(59), fix_int(60));
-			fixed_point_t old_load_avg = fix_int(get_load_average());
+			fixed_point_t old_load_avg = load_avg;
 			fixed_point_t temp1 = fix_mul(old_load_avg,frac1 );//need to change
 			int noOfreadyprocesses = 0 ;
 			for(int i = 0 ; i<num_of_ready_queues ; i++)
@@ -245,25 +249,29 @@ void clock_interrupt_handler()
 
 		}
 		/*RECENT : updated on each timer tick for running process*/
-		fixed_point_t old_recent_cpu = fix_int(env_get_recent_cpu(curenv));
-		fixed_point_t loadAvgBy2 =	fix_scale(fix_int(get_load_average()), 2) ; //(2*load_avg)
-		fixed_point_t loadAvgBy2Plus1 =	fix_add(loadAvgBy2 , fix_int(1) ); //(2*load_avg +1)
-		fixed_point_t a = fix_mul(loadAvgBy2,loadAvgBy2Plus1);// (2*load_avg) / (2*load_avg +1)
-		fixed_point_t oldBYnew = fix_mul(a, old_recent_cpu);
-		fixed_point_t fixed_nice = fix_int(env_get_nice(curenv));
-		curenv->recent_cpu = fix_add(oldBYnew,fixed_nice);
+		fixed_point_t one = fix_int(1);
+		fixed_point_t old_recent = curenv->recent_cpu ;
+
+		curenv->recent_cpu = fix_add(old_recent , one);
 
 		/* once per second for every process*/
 		if(timer_ticks()%1000 == 0) // or % quantum*1000
 		{
+			fixed_point_t old_recent_cpu = curenv->recent_cpu;
+			fixed_point_t loadAvgBy2 =	fix_scale(load_avg, 2) ; //(2*load_avg)
+			fixed_point_t loadAvgBy2Plus1 =	fix_add(loadAvgBy2 , fix_int(1) ); //(2*load_avg +1)
+			fixed_point_t a = fix_mul(loadAvgBy2,loadAvgBy2Plus1);// (2*load_avg) / (2*load_avg +1)
+			fixed_point_t oldBYnew = fix_mul(a, old_recent_cpu);
+			fixed_point_t fixed_nice = fix_int(env_get_nice(curenv));
+			curenv->recent_cpu = fix_add(oldBYnew,fixed_nice);
 			for (int i = 0;  i < num_of_ready_queues ;i++)
 			{
 				int sizeOfQueue = queue_size(&(env_ready_queues[i]));
 				struct Env *e ;
 				LIST_FOREACH(e,&(env_ready_queues[i]))
 				{
-					fixed_point_t old_recent_cpu =fix_int(env_get_recent_cpu(curenv));
-					fixed_point_t loadAvgBy2 =	fix_scale(fix_int(get_load_average()), 2) ; //(2*load_avg)
+					fixed_point_t old_recent_cpu =e->recent_cpu;
+					fixed_point_t loadAvgBy2 =	fix_scale(load_avg, 2) ; //(2*load_avg)======================
 					fixed_point_t loadAvgBy2Plus1 =	fix_add(loadAvgBy2 , fix_int(1)) ; //(2*load_avg +1)
 					fixed_point_t a = fix_mul(loadAvgBy2,loadAvgBy2Plus1);// (2*load_avg) / (2*load_avg +1)
 					fixed_point_t oldBYnew = fix_mul(a, old_recent_cpu);
@@ -284,11 +292,33 @@ void clock_interrupt_handler()
 				LIST_FOREACH(e,&(env_ready_queues[i]))
 				{
 					fixed_point_t temp_nice  = fix_int(env_get_nice(e) * 2);
-					fixed_point_t  temp_recent = fix_unscale(fix_int(env_get_recent_cpu(e)) ,4);
+					fixed_point_t  temp_recent = fix_unscale(e->recent_cpu,4);
 					fixed_point_t temp_priMax = fix_int(PRI_MAX);
 					fixed_point_t temp1 =fix_sub(temp_recent,temp_nice);
 					fixed_point_t newPriority  =fix_sub(temp_priMax,temp1);
-					e->priority = fix_trunc(newPriority);
+					int rounded_priority = fix_trunc(newPriority);
+
+					if(rounded_priority <0)
+					{
+						e->priority = 0;
+					}
+					else if(rounded_priority >= num_of_ready_queues)
+					{
+						e->priority = (num_of_ready_queues-1);
+					}
+					else
+					{
+						e->priority = rounded_priority;
+					}
+
+					if(e->priority != i)
+					{
+						struct Env * tmp =e;
+						remove_from_queue(&(env_ready_queues[i]),tmp);
+						enqueue(&(env_ready_queues[tmp->priority]), tmp);
+
+					}
+
 				}
 			}
 		}
