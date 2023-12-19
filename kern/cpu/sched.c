@@ -206,18 +206,29 @@ struct Env* fos_scheduler_BSD()
 	//panic("Not implemented yet");
 	//return NULL;
 	struct Env* enviroment ;
+	int flag = 0;
 	if (curenv != NULL)
 	{
 		enqueue(&(env_ready_queues[curenv->priority]), curenv);
 	}
-	for(int i = num_of_ready_queues; i >= 0; i--) {
+	for(int i = (num_of_ready_queues-1); i >=0 ;i--)
+	//for(int i =0 ; i<num_of_ready_queues ;i++)
+	{
 		int sizeOfQueue = queue_size(&(env_ready_queues[i]));
 		if(sizeOfQueue > 0){
 			enviroment = dequeue(&(env_ready_queues[i]));
 			kclock_set_quantum(quantums[i]);
+			flag = 1 ;
 			break;
 		}
 	}
+	if(flag == 0)
+	{
+		load_avg = fix_int(0);
+		return NULL;
+	}
+	//cprintf("curenv enviroment =%d \n",enviroment->env_id);
+
 	return enviroment;
 }
 //========================================
