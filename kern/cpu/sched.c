@@ -247,7 +247,8 @@ void clock_interrupt_handler()
 		/*LOAD : recalculated once per second*/
 		if((timer_ticks()+1)%no_of_quantums_in_1sec == 0)
 		{
-			cprintf("IN LOAd \n");
+			//cprintf("IN LOAd \n");
+
 			fixed_point_t frac1 = fix_div(fix_int(59), fix_int(60));
 			fixed_point_t old_load_avg = load_avg;
 			fixed_point_t temp1 = fix_mul(old_load_avg,frac1 );
@@ -272,6 +273,7 @@ void clock_interrupt_handler()
 
 		if((timer_ticks()+1)%no_of_quantums_in_1sec == 0)
 		{
+
 			//running
 			fixed_point_t old_recent_cpu = curenv->recent_cpu;
 			fixed_point_t loadAvgBy2 =	fix_scale(load_avg, 2) ; //(2*load_avg)
@@ -302,11 +304,11 @@ void clock_interrupt_handler()
 
 	     /* priority :recalculated every 4th tick*/
 		/*priority = PRI_MAX - (recent_cpu/ 4) - (nice × 2).*/
-		if(timer_ticks()%4==0)
+		if((timer_ticks()+1)%4==0)
 		{
-			cprintf("current priority = %d\n",curenv->priority);
-			cprintf("id =%d\n",curenv->env_id);
-			cprintf("===========\n");
+//			cprintf("current priority = %d\n",curenv->priority);
+//			cprintf("id =%d\n",curenv->env_id);
+//			cprintf("===========\n");
 			for (int i = 0;  i < num_of_ready_queues ;i++)
 		   {
 				int sizeOfQueue = queue_size(&(env_ready_queues[i]));
@@ -317,14 +319,16 @@ void clock_interrupt_handler()
 					fixed_point_t  temp_recent = fix_unscale(e->recent_cpu,4);
 					/* NEED TO CHANGE */
 					fixed_point_t temp_priMax = fix_int(PRI_MAX);
-					fixed_point_t temp1 =fix_sub(temp_recent,temp_nice);
-					fixed_point_t newPriority  =fix_sub(temp_priMax,temp1);
+//					fixed_point_t temp1 =fix_sub(temp_recent,temp_nice); //(recent_cpu/ 4) - (nice × 2) = temp1
+//					fixed_point_t newPriority  =fix_sub(temp_priMax,temp1);//PRI_MAX - temp1
+					fixed_point_t tmp1 =fix_sub(temp_priMax,temp_recent);
+					fixed_point_t newPriority = fix_sub(tmp1,temp_nice);
+
 					int rounded_priority = fix_trunc(newPriority);
 
 
 					if(rounded_priority < 0)
 					{
-
 						e->priority = 0;
 					}
 					else if(rounded_priority >= num_of_ready_queues)
@@ -337,10 +341,10 @@ void clock_interrupt_handler()
 					}
 
 					if(e->priority != i)
-					{
-						cprintf("priority = %d\n",e->priority);
-						cprintf("id =%d\n",e->env_id);
-						cprintf("===========\n");
+			{
+//						cprintf("priority = %d\n",e->priority);
+//						cprintf("id =%d\n",e->env_id);
+//						cprintf("===========\n");
 						struct Env * tmp =e;
 						remove_from_queue(&(env_ready_queues[i]),tmp);
 						enqueue(&(env_ready_queues[tmp->priority]), tmp);
@@ -364,6 +368,7 @@ void clock_interrupt_handler()
 	fos_scheduler();
 	/*****************************************/
 }
+
 //===================================================================
 // [9] Update LRU Timestamp of WS Elements
 //	  (Automatically Called Every Quantum in case of LRU Time Approx)
