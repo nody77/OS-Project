@@ -240,6 +240,7 @@ void clock_interrupt_handler()
 	//TODO: [PROJECT'23.MS3 - #5] [2] BSD SCHEDULER - Your code is here
 	{
 		uint8 quantum = quantums[0];
+
 		fixed_point_t no_of_quantums_in_1sec_fixed =fix_div(fix_int(1000), fix_int(quantum)) ;//1000/quantum
 		int no_of_quantums_in_1sec = fix_round(no_of_quantums_in_1sec_fixed);
 
@@ -318,7 +319,7 @@ void clock_interrupt_handler()
 					fixed_point_t temp_nice  = fix_int(env_get_nice(e) * 2);
 					fixed_point_t  temp_recent = fix_unscale(e->recent_cpu,4);
 					/* NEED TO CHANGE */
-					fixed_point_t temp_priMax = fix_int(PRI_MAX);
+					fixed_point_t temp_priMax = fix_int(num_of_ready_queues);
 //					fixed_point_t temp1 =fix_sub(temp_recent,temp_nice); //(recent_cpu/ 4) - (nice × 2) = temp1
 //					fixed_point_t newPriority  =fix_sub(temp_priMax,temp1);//PRI_MAX - temp1
 					fixed_point_t tmp1 =fix_sub(temp_priMax,temp_recent);
