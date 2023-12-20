@@ -561,42 +561,37 @@ void env_set_nice(struct Env* e, int nice_value)
 
 	//should we check if the priority is within the range [PRI_MIN,PRI_MAX]
 	e->nice = nice_value;
-	fixed_point_t temp_nice  = fix_int(e->nice * 2);
-	fixed_point_t  temp_recent = fix_unscale(e->recent_cpu ,4);
-	fixed_point_t temp_priMax = fix_int(PRI_MAX);
-	fixed_point_t temp1 =fix_sub(temp_recent,temp_nice);
-	fixed_point_t newPriority  =fix_sub(temp_priMax,temp1);
+
+	/*priority = PRI_MAX - (recent_cpu/ 4) - (nice × 2).*/
+	fixed_point_t temp_nice  = fix_int(e->nice * 2); //(nice × 2)
+	fixed_point_t  temp_recent = fix_unscale(e->recent_cpu ,4);//(recent_cpu/ 4)
+	/* NEED TO CHANGE */
+
+	fixed_point_t temp_priMax = fix_int(num_of_ready_queues);//PRI_MAX
+
+	fixed_point_t tmp1 =fix_sub(temp_priMax,temp_recent);
+	fixed_point_t newPriority = fix_sub(tmp1,temp_nice);
+
 	int rounded_priority = fix_trunc(newPriority);
 
-	if(rounded_priority < 0)
+	if(e->env_status != 4)
 	{
-		e->priority = 0;
-	}
-	else if(rounded_priority >= num_of_ready_queues)
-	{
-		e->priority = (num_of_ready_queues-1);
-	}
-	else
-	{
-		e->priority = rounded_priority;
-	}
-
-	for(int i = 0;i<num_of_ready_queues ; i++)
-	{
-		struct Env * ENV ;
-		struct Env * tmp ;
-
-		LIST_FOREACH(ENV,&(env_ready_queues[i]))
-		{
-			if(ENV->priority != i )
+		if(rounded_priority < 0) //Min
 			{
-				tmp = ENV;
-				remove_from_queue(&(env_ready_queues[i]),tmp);
-				enqueue(&(env_ready_queues[tmp->priority]), tmp);
-
+				e->priority = 0;
 			}
-		}
+			else if(rounded_priority >= num_of_ready_queues) //max
+			{
+				e->priority = (num_of_ready_queues-1);
+			}
+			else
+			{
+				e->priority = rounded_priority;
+			}
 	}
+
+
+
 
 
 }
