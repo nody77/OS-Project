@@ -51,54 +51,106 @@ int initialize_kheap_dynamic_allocator(uint32 daStart, uint32 initSizeToAllocate
 }
 
 
+
 void* sbrk(int increment)
 {
 	//TODO: [PROJECT'23.MS2 - #02] [1] KERNEL HEAP - sbrk()
 
-	if(increment > 0){
 
-		int num_of_kilos;
-		if(increment % PAGE_SIZE != 0)
+	//cprintf("SegmentBreak : %x \n\n",SegmentBreak);
+
+	//cprintf("SBRK \n\n");
+	if(increment > 0)
+	{
+		//cprintf("SBRK +ve \n\n");
+	int num_of_kilos;
+	if(increment % PAGE_SIZE != 0)
+	{
+		num_of_kilos = ROUNDUP(increment , PAGE_SIZE); // size is the rounded up value of the increment
+	}
+	else
+	{
+		num_of_kilos = increment;
+	}
+	int num_of_iterations = num_of_kilos / PAGE_SIZE;
+	uint32 * returnedBreak = SegmentBreak;
+//	cprintf("increment : %x \n\n",increment);
+//	cprintf("num of kilos : %x \n\n",num_of_kilos);
+	if(increment < PAGE_SIZE)
+	{
+		SegmentBreak = ROUNDDOWN(SegmentBreak,PAGE_SIZE);
+	}
+	else if(increment > PAGE_SIZE)
+	{
+		SegmentBreak = ROUNDUP(SegmentBreak,PAGE_SIZE);
+	}
+	for(int i = 0; i < num_of_iterations ; i++ )
+	{
+		if(SegmentBreak >= HardLimit)
 		{
-			num_of_kilos = ROUNDUP(increment , PAGE_SIZE); // size is the rounded up value of the increment
+			panic("Invalid Access !!");
 		}
 		else
 		{
-			num_of_kilos = increment;
-		}
-		int num_of_iterations = num_of_kilos / PAGE_SIZE;
-		uint32 * returnedBreak = SegmentBreak;
-		for(int i = 0; i < num_of_iterations ; i++ )
-		{
-			if(SegmentBreak >= HardLimit)
+			struct FrameInfo * frame_to_be_allocated ;
+			int returned_frame = allocate_frame(&frame_to_be_allocated);
+			if(returned_frame != 0)
 			{
-				panic("Invalid Access !!");
+
+				panic("Memory is full !!");
 			}
 			else
 			{
-				struct FrameInfo * frame_to_be_allocated ;
-				int returned_frame = allocate_frame(&frame_to_be_allocated);
-				if(returned_frame != 0)
-				{
-
-					panic("Memory is full !!");
-				}
-				else
-				{
-
-					int perm = PERM_WRITEABLE;
-					map_frame(ptr_page_directory , frame_to_be_allocated, (uint32) SegmentBreak, perm);
-					frame_to_be_allocated->va = (uint32)SegmentBreak;
-					SegmentBreak = (uint32 *)((void *)SegmentBreak + PAGE_SIZE);
-				}
+				int perm = PERM_WRITEABLE;
+				map_frame(ptr_page_directory , frame_to_be_allocated, (uint32) SegmentBreak, perm);
+				frame_to_be_allocated->va = (uint32)SegmentBreak;
+				SegmentBreak = (uint32 *)((void *)SegmentBreak + PAGE_SIZE);
 			}
 		}
-		return (void *)returnedBreak;
+	}
+//
+//	cprintf("SegmentBreak : %x \n\n",SegmentBreak);
+//    cprintf("returned Break : %x \n\n",returnedBreak);
+	return (void *)returnedBreak;
+
 	}
 	else if (increment < 0){
 
+		//cprintf("SBRK -ve \n\n");
+		if(SegmentBreak <= Start){
+
+			panic("Invalid Access !!");
+		}
+		else{
+
+			uint32* oldSegmentBreak = SegmentBreak;
+			oldSegmentBreak = ROUNDUP(oldSegmentBreak , PAGE_SIZE);
+
+			SegmentBreak = (uint32 *)((void*)SegmentBreak + increment);
+			uint32* tempSegmentBreak;
+			if((uint32)SegmentBreak % PAGE_SIZE != 0){
+
+				tempSegmentBreak = ROUNDUP(SegmentBreak , PAGE_SIZE);
+			}
+			else {
+
+				tempSegmentBreak = SegmentBreak;
+			}
+			uint32 num_of_iterations = ((uint32)oldSegmentBreak - (uint32)tempSegmentBreak) / PAGE_SIZE;
+			for(int i =0; i < num_of_iterations; i++){
+
+				uint32 * ptr_page_table;
+				struct FrameInfo * frame_to_be_unmapped = get_frame_info(ptr_page_directory , (uint32)tempSegmentBreak ,&ptr_page_table);
+				unmap_frame(ptr_page_directory , (uint32)tempSegmentBreak);
+				ptr_page_table[PTX(tempSegmentBreak)] = ptr_page_table[PTX(tempSegmentBreak)] & (~PERM_PRESENT);
+				frame_to_be_unmapped->va = 0;
+				tempSegmentBreak = (uint32 *)((void *)tempSegmentBreak + PAGE_SIZE);
+			}
+			return (void *) SegmentBreak;
+		}
 
 	}
+	//cprintf("return 0 segment : %x \n\n",SegmentBreak);
 	return (void *) SegmentBreak;
 
 	 /*increment > 0: move the segment break of the kernel to increase the size of its heap,
@@ -137,13 +189,16 @@ void* kmalloc(unsigned int size)
 	//kpanic_into_prompt("kmalloc() is not implemented yet...!!");
 	if (size <= DYN_ALLOC_MAX_BLOCK_SIZE)
 	{
+
 		void * va = alloc_block_FF(size);
+
 		return va;
 	}
 	else
 	{
 		if(isKHeapPlacementStrategyFIRSTFIT() == 1)
 		{
+
 			int index , counter = 0 , flag_frames_found = 0;
 			uint32 number_of_allocated_frames = ROUNDUP(size , PAGE_SIZE) / PAGE_SIZE;
 			for(index = 0 ; index < KHEAP_PAGE_ALLOCATOR_SIZE ; index+=1)
@@ -177,7 +232,6 @@ void* kmalloc(unsigned int size)
 						{
 							return NULL;
 						}
-						cprintf("allocated & mapped at va %x\n", va);
 						if(i == start_index)
 						{
 							Page_Allocation_list[i].size = size;
@@ -197,7 +251,6 @@ void* kmalloc(unsigned int size)
 					}
 
 				}
-				cprintf("kmalloc of size %d is allocated at address %x\n", size, ((uint32)HardLimit + PAGE_SIZE + (PAGE_SIZE * start_index)));
 				return (void *)((uint32)HardLimit + PAGE_SIZE + (PAGE_SIZE * start_index));
 			}
 
@@ -257,9 +310,16 @@ unsigned int kheap_virtual_address(unsigned int physical_address)
 	//EFFICIENT IMPLEMENTATION ~O(1) IS REQUIRED ==================
 	//change this "return" according to your answer
 	struct FrameInfo* frame = to_frame_info(physical_address);
+	if (frame->references==0)
+		return 0;
+	uint32 offset = physical_address & 0x00000FFF;
+	uint32 returned_address = frame->va | offset;
+	return (unsigned int)returned_address;
+	/*struct FrameInfo* frame = to_frame_info(physical_address);
 	if(frame->va >= (uint32)HardLimit + PAGE_SIZE && frame->va < KERNEL_HEAP_MAX)
 	{
-		uint32 page_table_index = PTX(frame->va);
+		//uint32 page_table_index = PTX(frame->va);
+		//uint32 offset = page_table_index & 0x00000FFF;
 		uint32 offset = physical_address & 0x00000FFF;
 		uint32 returned_address = frame->va + offset;
 		return (unsigned int)returned_address;
@@ -272,7 +332,7 @@ unsigned int kheap_virtual_address(unsigned int physical_address)
 		//cprintf("The frame va = %x , the frame references = %d\n" ,frame->va,frame->references );
 		uint32 returned_address = frame->va + offset;
 		return (unsigned int)returned_address;
-	}
+	}*/
 	return 0;
 }
 unsigned int kheap_physical_address(unsigned int virtual_address)
@@ -281,24 +341,41 @@ unsigned int kheap_physical_address(unsigned int virtual_address)
 	//refer to the project presentation and documentation for details
 	// Write your code here, remove the panic and write your code
 	//panic("kheap_physical_address() is not implemented yet...!!");
+	/*cprintf("The va in kheap = %x\n" , virtual_address);
 	if(virtual_address >=((unsigned int)HardLimit + PAGE_SIZE) && virtual_address <= KERNEL_HEAP_MAX)
 	{
 		uint32 offset = (uint32)(virtual_address & 0x00000FFF);
+		cprintf("The offset in kheap = %d\n" , offset);
 		uint32 *ptr_page_table;
 		get_page_table(ptr_page_directory, virtual_address, &ptr_page_table);
+		cprintf("page table entry = %x\n" , ptr_page_table[PTX(virtual_address)]);
 		uint32 start_of_frame = ptr_page_table[PTX(virtual_address)] & 0xFFFFF000 ;
+		//uint32 perm = ptr_page_table[PTX(virtual_address)] &0x00000FFF;
+		//cprintf("retuned address  = %x\n",start_of_frame + (offset | perm));
 		return (unsigned int)(start_of_frame + offset);
 	}
 	else if(virtual_address >= (unsigned int)Start && virtual_address <= (unsigned int)SegmentBreak)
 	{
 		uint32 offset = (uint32)(virtual_address & 0x00000FFF);
+		cprintf("The offset in kheap = %d\n" , offset);
 		uint32 *ptr_page_table;
 		get_page_table(ptr_page_directory, virtual_address, &ptr_page_table);
+		cprintf("page table entry = %x\n" , ptr_page_table[PTX(virtual_address)]);
 		uint32 start_of_frame = ptr_page_table[PTX(virtual_address)] & 0xFFFFF000 ;
-		return (unsigned int)(start_of_frame + offset);
-	}
+		//uint32 perm = ptr_page_table[PTX(virtual_address)] &0x00000FFF;
+		//cprintf("retuned address  = %x\n",start_of_frame + (offset | perm));
+		return (unsigned int)(start_of_frame + offset );
+	}*/
+	uint32 offset = (uint32)(virtual_address & 0x00000FFF);
+	uint32 *ptr_page_table;
+	get_page_table(ptr_page_directory, virtual_address, &ptr_page_table);
+	if (ptr_page_table==NULL)
+		return 0;
+	if (ptr_page_table[PTX(virtual_address)]==0)
+		return 0;
+	uint32 start_of_frame = ptr_page_table[PTX(virtual_address)] & 0xFFFFF000 ;
+	return (unsigned int)(start_of_frame | offset );
 	//change this "return" according to your answer
-	return 0;
 }
 
 
