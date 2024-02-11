@@ -117,38 +117,55 @@ uint32 calculate_required_frames(uint32* page_directory, uint32 sva, uint32 size
 //=====================================
 void allocate_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 {
+	//cprintf("allocate_user_mem 1\n");
 	/*=============================================================================*/
 	//TODO: [PROJECT'23.MS2 - #10] [2] USER HEAP - allocate_user_mem() [Kernel Side]
 	/*REMOVE THESE LINES BEFORE START CODING */
 	//inctst();
 	//return;
 	/*=============================================================================*/
-
+	//cprintf("Entered allocate_user_mem\n");
 	// Write your code here, remove the panic and write your code
 	//panic("allocate_user_mem() is not implemented yet...!!");
 	//check if there is a page_table or not
-	uint32 *ptrTOPageTable=NULL;
-	int tableFoundCheck =get_page_table(ptr_page_directory,virtual_address,&(ptrTOPageTable));
-	if(tableFoundCheck==TABLE_NOT_EXIST){	// if not -> create new page table
-		ptrTOPageTable = create_page_table(ptr_page_directory,virtual_address);
-	}
+	uint32 *ptrTOPageTable = NULL;
+
 	//Mark the given range to indicate it’s reserved for the page allocator of this environment
-	if(size <= PAGE_SIZE){
+	//if(size <= PAGE_SIZE){
+
 	// PERM_AVAILABLE --> Available for software use
-	ptrTOPageTable [PTX(virtual_address)]=ptrTOPageTable[PTX(virtual_address)] | (PERM_AVAILABLE);
+	//ptrTOPageTable [PTX(virtual_address)]=ptrTOPageTable[PTX(virtual_address)] | (PERM_AVAILABLE);
 	//pt_set_page_permissions(e->env_page_directory, virtual_address, PERM_AVAILABLE,0);
-	}
-	else{
-		uint32 newVirtualAddress=virtual_address;
-		uint32 numOfPages=size/PAGE_SIZE;
-		for(uint32 i=0;i<numOfPages;i++)
+	//cprintf("permission available in if allocate %x\n", ptrTOPageTable [PTX(virtual_address)]);
+	//}
+	//else{
+
+		//uint32 newVirtualAddress = virtual_address;
+		uint32 numOfPages = ROUNDUP(size , PAGE_SIZE) / PAGE_SIZE;
+		//numOfPages = ROUNDUP(numOfPages ,)
+		for(uint32 i=0; i<numOfPages; i++)
 		{
-			ptrTOPageTable [PTX(newVirtualAddress)]=ptrTOPageTable[PTX(newVirtualAddress)] | (PERM_AVAILABLE);
-			newVirtualAddress=newVirtualAddress+PAGE_SIZE;
+			int tableFoundCheck = get_page_table(e->env_page_directory,virtual_address,&(ptrTOPageTable));
+
+				if(tableFoundCheck == TABLE_NOT_EXIST){	// if not -> create new page table
+
+					//cprintf("entered Table Not Exist\n");
+					ptrTOPageTable = create_page_table(e->env_page_directory,virtual_address);
+				}
+			pt_set_page_permissions(e->env_page_directory, virtual_address, PERM_AVAILABLE,0);
+			pt_set_page_permissions(e->env_page_directory, virtual_address, PERM_WRITEABLE,0);
+			pt_set_page_permissions(e->env_page_directory, virtual_address, PERM_USER,0);
+			//cprintf("permission available in else allocate %x\n", ptrTOPageTable [PTX(virtual_address)]);
+
+			virtual_address = virtual_address + PAGE_SIZE;
 		}
-	}
+	//}
+		//cprintf("allocate_user_mem 2\n");
 
 }
+
+
+
 
 //=====================================
 // 2) FREE USER MEMORY:
@@ -167,7 +184,7 @@ void free_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 
 	//TODO: [PROJECT'23.MS2 - BONUS#2] [2] USER HEAP - free_user_mem() IN O(1): removing page from WS List instead of searching the entire list
 
-
+	//	cprintf("free user mem 1\n");
         int FIFO = 0 ;
         if (LIST_SIZE(&e->page_WS_list)==e->page_WS_max_size){
 
@@ -197,7 +214,7 @@ void free_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 //		}
 
 
-		if(FIFO == 1)
+		if((FIFO == 1)&&(isPageReplacmentAlgorithmFIFO()))
 		{
 			struct WorkingSetElement* tmp = e->page_last_WS_element;
 			e->page_last_WS_element=NULL;
@@ -220,7 +237,7 @@ void free_user_mem(struct Env* e, uint32 virtual_address, uint32 size)
 //				else
 //					e->page_last_WS_element = NULL;
 
-
+		//cprintf("free user mem 2\n");
 
 }
 //=====================================
