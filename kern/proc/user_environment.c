@@ -7,7 +7,7 @@
 #include <inc/assert.h>
 #include <inc/elf.h>
 #include <inc/dynamic_allocator.h>
-
+#include <inc/uheap.h>
 #include <kern/proc/user_environment.h>
 #include <kern/trap/trap.h>
 #include <kern/trap/fault_handler.h>
@@ -450,13 +450,46 @@ void env_free(struct Env *e)
 	// your code is here, remove the panic and write your code
 	{
 		panic("env_free() is not implemented yet...!!");
+//		struct WorkingSetElement *WS_element ;
+//		/*All pages in the page working set (or LRU lists)*/
+//		if(isPageReplacmentAlgorithmFIFO())
+//		{
+//			LIST_FOREACH(WS_element,&(e->page_WS_list))
+//				{
+//					env_page_ws_invalidate(e,WS_element->virtual_address);
+//				}
+//		}
+//		else if(isPageReplacmentAlgorithmLRU(PG_REP_LRU_LISTS_APPROX))
+//		{
+//			LIST_FOREACH(WS_element,&(e->ActiveList))
+//				{
+//					env_page_ws_invalidate(e,WS_element->virtual_address);
+//				}
+//			LIST_FOREACH(WS_element,&(e->SecondList))
+//				{
+//					env_page_ws_invalidate(e,WS_element->virtual_address);
+//				}
+		}
+
+		/*Working set itself (or LRU lists)*/
+
+
+
+		/*All page tables in the entire user virtual memory*/
+
+
+
+
+
+		/*Directory table*/
 
 
 
 
 
 
-	}
+
+
 
 	// [9] remove this program from the page file
 	/*(ALREADY DONE for you)*/
@@ -780,12 +813,11 @@ void initialize_uheap_dynamic_allocator(struct Env* e, uint32 daStart, uint32 da
 	//	1) there's no initial allocations for the dynamic allocator of the user heap (=0)
 	//	2) call the initialize_dynamic_allocator(..) to complete the initialization
 	//panic("not implemented yet");
-	//NOT SURE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	e->start = (uint32*)daStart ;
 	e->hardLimit = (uint32*) daLimit ;
 	e->segmentBreak = (uint32 *)daStart;
 	initialize_dynamic_allocator(daStart, 0);
-
+	//initialize_user_page_list();
 }
 
 //========================================================
